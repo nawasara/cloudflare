@@ -2,255 +2,250 @@
 
 namespace Nawasara\Cloudflare\Services;
 
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Carbon;
+use Nawasara\Cloudflare\Models\EndpointHealth;
 
 class DnsHealthChecker
 {
-    public const CACHE_TTL = 1800; // 30 minutes
     public const HTTP_TIMEOUT = 8;
-    public const SSL_TIMEOUT = 5;
+    public const CONNECT_TIMEOUT = 5;
+    public const USER_AGENT = 'Nawasara-HealthChecker/1.0';
 
     /**
-     * Check HTTP reachability only (fast, bulk-friendly).
-     * Returns: ['identifier', 'url', 'status_code', 'final_url',
-     *           'response_time_ms', 'error', 'checked_at']
-     */
-    public function probeHttp(string $identifier): array
-    {
-        $url = 'https://' . $identifier;
-        $start = microtime(true);
-
-        try {
-            $response = Http::withOptions([
-                'allow_redirects' => ['max' => 3, 'strict' => false, 'track_redirects' => true],
-                'verify' => false,
-            ])
-                ->timeout(self::HTTP_TIMEOUT)
-                ->withUserAgent('Nawasara-HealthChecker/1.0')
-                ->get($url);
-
-            $elapsed = (int) round((microtime(true) - $start) * 1000);
-            $finalUrl = $response->handlerStats()['url'] ?? $url;
-
-            $result = [
-                'identifier' => $identifier,
-                'url' => $url,
-                'status_code' => $response->status(),
-                'final_url' => $finalUrl,
-                'response_time_ms' => $elapsed,
-                'error' => null,
-                'checked_at' => now()->toIso8601String(),
-            ];
-        } catch (\Throwable $e) {
-            $elapsed = (int) round((microtime(true) - $start) * 1000);
-            $result = [
-                'identifier' => $identifier,
-                'url' => $url,
-                'status_code' => null,
-                'final_url' => null,
-                'response_time_ms' => $elapsed,
-                'error' => $this->shortError($e->getMessage()),
-                'checked_at' => now()->toIso8601String(),
-            ];
-        }
-
-        $cached = $this->getCached($identifier);
-        $merged = array_merge($cached ?? [], $result);
-        Cache::put($this->cacheKey($identifier), $merged, self::CACHE_TTL);
-
-        return $merged;
-    }
-
-    /**
-     * Check SSL certificate of an identifier via direct TLS socket.
-     * Returns: ['ssl_valid_from', 'ssl_valid_to', 'ssl_days_remaining',
-     *           'ssl_issuer', 'ssl_cn', 'ssl_error']
-     */
-    public function probeSsl(string $identifier): array
-    {
-        $result = [
-            'ssl_valid_from' => null,
-            'ssl_valid_to' => null,
-            'ssl_days_remaining' => null,
-            'ssl_issuer' => null,
-            'ssl_cn' => null,
-            'ssl_error' => null,
-        ];
-
-        $ctx = stream_context_create([
-            'ssl' => [
-                'capture_peer_cert' => true,
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'SNI_enabled' => true,
-                'peer_name' => $identifier,
-            ],
-        ]);
-
-        $errno = 0;
-        $errstr = '';
-        $client = @stream_socket_client(
-            "ssl://{$identifier}:443",
-            $errno,
-            $errstr,
-            self::SSL_TIMEOUT,
-            STREAM_CLIENT_CONNECT,
-            $ctx
-        );
-
-        if (! $client) {
-            $result['ssl_error'] = $errstr ?: 'Connection failed';
-            return $result;
-        }
-
-        $params = stream_context_get_params($client);
-        @fclose($client);
-
-        $cert = $params['options']['ssl']['peer_certificate'] ?? null;
-        if (! $cert) {
-            $result['ssl_error'] = 'No peer certificate';
-            return $result;
-        }
-
-        $parsed = openssl_x509_parse($cert);
-        if (! $parsed) {
-            $result['ssl_error'] = 'Failed to parse certificate';
-            return $result;
-        }
-
-        $validTo = $parsed['validTo_time_t'] ?? null;
-        $validFrom = $parsed['validFrom_time_t'] ?? null;
-
-        $result['ssl_valid_from'] = $validFrom ? date('c', $validFrom) : null;
-        $result['ssl_valid_to'] = $validTo ? date('c', $validTo) : null;
-        $result['ssl_days_remaining'] = $validTo ? (int) floor(($validTo - time()) / 86400) : null;
-        $result['ssl_issuer'] = $parsed['issuer']['O'] ?? ($parsed['issuer']['CN'] ?? null);
-        $result['ssl_cn'] = $parsed['subject']['CN'] ?? null;
-
-        return $result;
-    }
-
-    /**
-     * Full check (HTTP + SSL) for a single identifier. Writes to cache.
-     */
-    public function checkOne(string $identifier): array
-    {
-        $http = $this->probeHttp($identifier);
-        $ssl = $this->probeSsl($identifier);
-
-        $merged = array_merge($http, $ssl, ['checked_at' => now()->toIso8601String()]);
-        Cache::put($this->cacheKey($identifier), $merged, self::CACHE_TTL);
-
-        return $merged;
-    }
-
-    /**
-     * Bulk HTTP check using Http::pool for concurrent requests.
-     * Does NOT run SSL check (too slow for bulk). Writes each result to cache.
+     * Check a batch of identifiers in parallel via curl_multi.
+     * Captures HTTP status, response time, and (when withSsl=true) the
+     * peer certificate via CURLOPT_CERTINFO. Persists each result to the
+     * nawasara_cloudflare_endpoint_health table.
      *
      * @param array<string> $identifiers
+     * @return array<string,array> identifier => result row
      */
-    public function checkManyHttp(array $identifiers, int $concurrency = 15): array
+    public function checkMany(array $identifiers, bool $withSsl = false, int $concurrency = 15): array
     {
+        $identifiers = array_values(array_unique(array_filter($identifiers)));
+        if (empty($identifiers)) {
+            return [];
+        }
+
         $results = [];
         $chunks = array_chunk($identifiers, $concurrency);
 
         foreach ($chunks as $chunk) {
-            $start = microtime(true);
-            $responses = Http::pool(fn ($pool) => array_map(
-                fn ($id) => $pool->as($id)
-                    ->withOptions(['verify' => false])
-                    ->timeout(self::HTTP_TIMEOUT)
-                    ->withUserAgent('Nawasara-HealthChecker/1.0')
-                    ->get('https://' . $id),
-                $chunk
-            ));
-            $elapsed = (int) round((microtime(true) - $start) * 1000);
+            $multi = curl_multi_init();
+            $handles = [];
 
             foreach ($chunk as $id) {
-                $resp = $responses[$id] ?? null;
-                $error = null;
-                $status = null;
-                if ($resp instanceof \Illuminate\Http\Client\ConnectionException
-                    || $resp instanceof \Throwable) {
-                    $error = $this->shortError($resp->getMessage());
-                } elseif ($resp) {
-                    $status = $resp->status();
-                }
-
-                $existing = $this->getCached($id) ?? [];
-                $result = array_merge($existing, [
-                    'identifier' => $id,
-                    'url' => 'https://' . $id,
-                    'status_code' => $status,
-                    'response_time_ms' => $elapsed,
-                    'error' => $error,
-                    'checked_at' => now()->toIso8601String(),
+                $ch = curl_init();
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => 'https://' . $id,
+                    CURLOPT_NOBODY => true, // HEAD-style: no body
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_MAXREDIRS => 3,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
+                    CURLOPT_TIMEOUT => self::HTTP_TIMEOUT,
+                    CURLOPT_USERAGENT => self::USER_AGENT,
+                    CURLOPT_CERTINFO => $withSsl,
                 ]);
-
-                Cache::put($this->cacheKey($id), $result, self::CACHE_TTL);
-                $results[$id] = $result;
+                $handles[$id] = $ch;
+                curl_multi_add_handle($multi, $ch);
             }
+
+            $running = null;
+            do {
+                curl_multi_exec($multi, $running);
+                if ($running) {
+                    curl_multi_select($multi, 1.0);
+                }
+            } while ($running > 0);
+
+            foreach ($handles as $id => $ch) {
+                $row = $this->extractRow($id, $ch, $withSsl);
+                $results[$id] = $row;
+                $this->persist($row, $withSsl);
+                curl_multi_remove_handle($multi, $ch);
+                curl_close($ch);
+            }
+
+            curl_multi_close($multi);
         }
 
         return $results;
     }
 
-    public function getCached(string $identifier): ?array
+    /**
+     * Convenience wrapper: check a single identifier with full HTTP + SSL.
+     */
+    public function checkOne(string $identifier, bool $withSsl = true): array
     {
-        return Cache::get($this->cacheKey($identifier));
+        $r = $this->checkMany([$identifier], $withSsl, 1);
+        return $r[$identifier] ?? [];
     }
 
-    public function getCachedMany(array $identifiers): array
+    protected function extractRow(string $id, \CurlHandle $ch, bool $withSsl): array
     {
-        $out = [];
-        foreach ($identifiers as $id) {
-            $cached = $this->getCached($id);
-            if ($cached) {
-                $out[$id] = $cached;
+        $errno = curl_errno($ch);
+        $errMsg = $errno ? curl_error($ch) : null;
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: null;
+        $totalTime = (float) curl_getinfo($ch, CURLINFO_TOTAL_TIME);
+        $elapsedMs = (int) round($totalTime * 1000);
+
+        $error = $errno ? $this->shortError($errno, $errMsg) : null;
+        // Curl reports no error but status is also missing -> connection problem
+        // (e.g. server closed connection before sending headers). Treat as failure.
+        if (! $error && $status === null) {
+            $error = 'No response (connection closed)';
+        }
+
+        $row = [
+            'identifier' => $id,
+            'status_code' => $status,
+            'response_time_ms' => $elapsedMs,
+            'error' => $error,
+            'checked_at' => now(),
+        ];
+
+        if ($withSsl) {
+            $sslData = $this->extractSslFromCertinfo($ch);
+            $row = array_merge($row, $sslData, ['ssl_checked_at' => now()]);
+        }
+
+        $row['state'] = $this->computeState($row);
+
+        return $row;
+    }
+
+    protected function extractSslFromCertinfo(\CurlHandle $ch): array
+    {
+        $defaults = [
+            'ssl_days_remaining' => null,
+            'ssl_valid_to' => null,
+            'ssl_issuer' => null,
+            'ssl_cn' => null,
+            'ssl_error' => null,
+        ];
+
+        $certInfo = curl_getinfo($ch, CURLINFO_CERTINFO);
+        if (! is_array($certInfo) || empty($certInfo)) {
+            // No cert captured — usually because connection failed before TLS.
+            $errno = curl_errno($ch);
+            if ($errno) {
+                return array_merge($defaults, ['ssl_error' => $this->shortError($errno, curl_error($ch))]);
+            }
+            return $defaults;
+        }
+
+        // First entry is the leaf cert.
+        $leaf = $certInfo[0] ?? [];
+        $expireStr = $leaf['Expire date'] ?? null;
+        $startStr = $leaf['Start date'] ?? null;
+        $subject = $leaf['Subject'] ?? '';
+        $issuer = $leaf['Issuer'] ?? '';
+
+        $validTo = $expireStr ? strtotime($expireStr) : null;
+        $days = $validTo ? (int) floor(($validTo - time()) / 86400) : null;
+
+        return [
+            'ssl_days_remaining' => $days,
+            'ssl_valid_to' => $validTo ? Carbon::createFromTimestamp($validTo) : null,
+            'ssl_issuer' => $this->parseDn($issuer, ['O', 'CN']),
+            'ssl_cn' => $this->parseDn($subject, ['CN']),
+            'ssl_error' => null,
+        ];
+    }
+
+    /**
+     * Pull the first matching field from a curl-formatted DN string.
+     * curl returns DN as multi-line: "CN = foo\nO = bar\n..." or "CN=foo, O=bar".
+     */
+    protected function parseDn(string $dn, array $fields): ?string
+    {
+        if ($dn === '') return null;
+        // Normalize separators.
+        $dn = str_replace(["\r", "\n"], ',', $dn);
+        $parts = preg_split('/\s*,\s*/', $dn);
+
+        foreach ($fields as $key) {
+            foreach ($parts as $part) {
+                if (preg_match('/^\s*' . preg_quote($key, '/') . '\s*=\s*(.+?)\s*$/i', $part, $m)) {
+                    return $m[1];
+                }
             }
         }
-        return $out;
+        return null;
     }
 
-    public function forget(string $identifier): void
+    /**
+     * State inference rules:
+     *  - connection error / 5xx / SSL expired       -> critical
+     *  - 404 / SSL <= 14 days                       -> warning
+     *  - 2xx / 3xx / 401 / 403                      -> ok
+     *  - other 4xx                                  -> warning
+     *  - no status                                  -> unknown
+     *
+     * 401/403 on root path = endpoint alive but auth-protected (normal for OPD apps).
+     */
+    public function computeState(array $row): string
     {
-        Cache::forget($this->cacheKey($identifier));
-    }
+        if (! empty($row['error'])) return 'critical';
 
-    protected function cacheKey(string $identifier): string
-    {
-        return 'cloudflare_dns_health:' . strtolower($identifier);
-    }
+        $status = $row['status_code'] ?? null;
+        $sslDays = $row['ssl_days_remaining'] ?? null;
 
-    protected function shortError(string $message): string
-    {
-        if (stripos($message, 'cURL error 6') !== false) return 'DNS tidak resolve';
-        if (stripos($message, 'cURL error 7') !== false) return 'Connection refused';
-        if (stripos($message, 'cURL error 28') !== false) return 'Timeout';
-        if (stripos($message, 'cURL error 35') !== false) return 'SSL handshake gagal';
-        if (stripos($message, 'cURL error 60') !== false) return 'SSL cert invalid';
-        return mb_substr($message, 0, 120);
+        if ($status === null) return 'unknown';
+        if ($status >= 500) return 'critical';
+        if ($sslDays !== null && $sslDays < 0) return 'critical';
+        if ($status === 404) return 'warning';
+        if ($sslDays !== null && $sslDays <= 14) return 'warning';
+        if (in_array($status, [401, 403], true)) return 'ok';
+        if ($status >= 400) return 'warning';
+
+        return 'ok';
     }
 
     public static function overallState(array $health): string
     {
-        if (empty($health)) return 'unknown';
-        if (! empty($health['error'])) return 'critical';
+        return (new self())->computeState($health);
+    }
 
-        $status = $health['status_code'] ?? null;
-        $sslDays = $health['ssl_days_remaining'] ?? null;
+    protected function persist(array $row, bool $withSsl): void
+    {
+        $payload = [
+            'status_code' => $row['status_code'] ?? null,
+            'response_time_ms' => $row['response_time_ms'] ?? null,
+            'error' => $row['error'] ?? null,
+            'state' => $row['state'] ?? 'unknown',
+            'checked_at' => $row['checked_at'] ?? now(),
+        ];
 
-        if ($status === null) return 'unknown';
-        if ($status >= 500) return 'critical';
-        if ($status >= 400) return 'warning';
-
-        if ($sslDays !== null) {
-            if ($sslDays < 0) return 'critical';
-            if ($sslDays <= 14) return 'warning';
+        // Only overwrite SSL fields when we actually probed SSL on this run.
+        // HTTP-only checks must not wipe previously captured cert info.
+        if ($withSsl) {
+            $payload['ssl_days_remaining'] = $row['ssl_days_remaining'] ?? null;
+            $payload['ssl_valid_to'] = $row['ssl_valid_to'] ?? null;
+            $payload['ssl_issuer'] = $row['ssl_issuer'] ?? null;
+            $payload['ssl_cn'] = $row['ssl_cn'] ?? null;
+            $payload['ssl_error'] = $row['ssl_error'] ?? null;
+            $payload['ssl_checked_at'] = $row['ssl_checked_at'] ?? now();
         }
 
-        return 'ok';
+        EndpointHealth::updateOrCreate(
+            ['identifier' => $row['identifier']],
+            $payload
+        );
+    }
+
+    protected function shortError(int $errno, ?string $message): string
+    {
+        return match ($errno) {
+            6 => 'DNS tidak resolve',
+            7 => 'Connection refused',
+            28 => 'Timeout',
+            35 => 'SSL handshake gagal',
+            60 => 'SSL cert invalid',
+            default => 'cURL ' . $errno . ': ' . mb_substr($message ?? '', 0, 100),
+        };
     }
 }

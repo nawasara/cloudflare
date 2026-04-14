@@ -5,6 +5,7 @@ namespace Nawasara\Cloudflare\Livewire\Health\Section;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
+use Nawasara\Cloudflare\Models\EndpointHealth;
 use Nawasara\Cloudflare\Services\DnsHealthChecker;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Registry\Models\Opd;
@@ -47,32 +48,36 @@ class DnsHealth extends Component
             $q->where('opd_id', $this->opdFilter);
         }
 
+        if ($this->stateFilter) {
+            $stateIdentifiers = EndpointHealth::where('state', $this->stateFilter)->pluck('identifier');
+            if ($this->stateFilter === 'unchecked') {
+                // "unchecked" = no row in endpoint_health at all
+                $checkedIds = EndpointHealth::pluck('identifier');
+                $q->whereNotIn('identifier', $checkedIds);
+            } else {
+                $q->whereIn('identifier', $stateIdentifiers);
+            }
+        }
+
         return $q->orderBy('identifier')->paginate(25);
     }
 
-    /**
-     * Merge paginated assets with cached health data, then apply state filter.
-     */
     #[Computed]
     public function rows()
     {
         $page = $this->items;
         $identifiers = $page->pluck('identifier')->all();
-        $healthMap = app(DnsHealthChecker::class)->getCachedMany($identifiers);
+        $healthMap = EndpointHealth::whereIn('identifier', $identifiers)
+            ->get()
+            ->keyBy('identifier');
 
         $rows = [];
         foreach ($page as $asset) {
-            $health = $healthMap[$asset->identifier] ?? null;
-            $state = $health ? DnsHealthChecker::overallState($health) : 'unchecked';
-
-            if ($this->stateFilter && $state !== $this->stateFilter) {
-                continue;
-            }
-
+            $h = $healthMap[$asset->identifier] ?? null;
             $rows[] = [
                 'asset' => $asset,
-                'health' => $health,
-                'state' => $state,
+                'health' => $h,
+                'state' => $h?->state ?? 'unchecked',
             ];
         }
 
@@ -82,25 +87,26 @@ class DnsHealth extends Component
     #[Computed]
     public function summary()
     {
-        // Summary computed against ALL assets (not paginated), from cache only.
-        $counts = ['ok' => 0, 'warning' => 0, 'critical' => 0, 'unknown' => 0, 'unchecked' => 0, 'total' => 0];
-
-        $all = Asset::query()
-            ->where('package_ref', 'cloudflare')
+        $totalAssets = Asset::where('package_ref', 'cloudflare')
             ->where('type', 'subdomain')
-            ->pluck('identifier')
-            ->all();
+            ->count();
 
-        $counts['total'] = count($all);
-        $healthMap = app(DnsHealthChecker::class)->getCachedMany($all);
+        $byState = EndpointHealth::query()
+            ->selectRaw('state, COUNT(*) as c')
+            ->groupBy('state')
+            ->pluck('c', 'state')
+            ->toArray();
 
-        foreach ($all as $id) {
-            $health = $healthMap[$id] ?? null;
-            $state = $health ? DnsHealthChecker::overallState($health) : 'unchecked';
-            $counts[$state] = ($counts[$state] ?? 0) + 1;
-        }
+        $checked = array_sum($byState);
 
-        return $counts;
+        return [
+            'total' => $totalAssets,
+            'ok' => $byState['ok'] ?? 0,
+            'warning' => $byState['warning'] ?? 0,
+            'critical' => $byState['critical'] ?? 0,
+            'unknown' => $byState['unknown'] ?? 0,
+            'unchecked' => max(0, $totalAssets - $checked),
+        ];
     }
 
     public function checkOne(int $assetId)
@@ -108,7 +114,7 @@ class DnsHealth extends Component
         $asset = Asset::find($assetId);
         if (! $asset) return;
 
-        app(DnsHealthChecker::class)->checkOne($asset->identifier);
+        app(DnsHealthChecker::class)->checkOne($asset->identifier, true);
         unset($this->rows, $this->summary);
         toaster_success("Checked {$asset->identifier}");
     }
@@ -122,11 +128,11 @@ class DnsHealth extends Component
         }
 
         $start = microtime(true);
-        app(DnsHealthChecker::class)->checkManyHttp($ids, 15);
+        app(DnsHealthChecker::class)->checkMany($ids, false, 25);
         $elapsed = round(microtime(true) - $start, 1);
 
         unset($this->rows, $this->summary);
-        toaster_success(count($ids) . " record dicek dalam {$elapsed}s (HTTP only, klik Check per record untuk SSL)");
+        toaster_success(count($ids) . " record dicek dalam {$elapsed}s (HTTP only)");
     }
 
     public function setStateFilter(string $state)

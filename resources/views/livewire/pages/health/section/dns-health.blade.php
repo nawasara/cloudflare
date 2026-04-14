@@ -132,15 +132,15 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        @if ($h && !empty($h['error']))
+                        @if ($h && $h->error)
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                title="{{ $h['error'] }}">ERR</span>
-                        @elseif ($h && isset($h['status_code']))
+                                title="{{ $h->error }}">ERR</span>
+                        @elseif ($h && $h->status_code)
                             @php
-                                $code = $h['status_code'];
+                                $code = $h->status_code;
                                 $codeClass = match(true) {
                                     $code >= 500 => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                                    $code >= 400 => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                    $code >= 400 && !in_array($code, [401, 403]) => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
                                     $code >= 300 => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
                                     default => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
                                 };
@@ -151,27 +151,27 @@
                         @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-400">
-                        {{ $h && isset($h['response_time_ms']) ? $h['response_time_ms'] . 'ms' : '-' }}
+                        {{ $h && $h->response_time_ms !== null ? $h->response_time_ms . 'ms' : '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        @if ($h && !empty($h['ssl_error']))
-                            <span class="text-red-600 dark:text-red-400 text-xs" title="{{ $h['ssl_error'] }}">SSL error</span>
-                        @elseif ($h && isset($h['ssl_days_remaining']))
+                        @if ($h && $h->ssl_error)
+                            <span class="text-red-600 dark:text-red-400 text-xs" title="{{ $h->ssl_error }}">SSL error</span>
+                        @elseif ($h && $h->ssl_days_remaining !== null)
                             @php
-                                $days = $h['ssl_days_remaining'];
+                                $days = $h->ssl_days_remaining;
                                 $sslClass = match(true) {
                                     $days < 0 => 'text-red-600 dark:text-red-400',
                                     $days <= 14 => 'text-yellow-600 dark:text-yellow-400',
                                     default => 'text-green-600 dark:text-green-400',
                                 };
                             @endphp
-                            <span class="text-xs {{ $sslClass }}" title="{{ $h['ssl_issuer'] ?? '' }}">{{ $days }}d</span>
+                            <span class="text-xs {{ $sslClass }}" title="{{ $h->ssl_issuer }}">{{ $days }}d</span>
                         @else
                             <span class="text-gray-300 dark:text-neutral-600 text-xs">-</span>
                         @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-neutral-500">
-                        {{ $h ? \Carbon\Carbon::parse($h['checked_at'])->diffForHumans() : '-' }}
+                        {{ $h && $h->checked_at ? $h->checked_at->diffForHumans() : '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <button wire:click="checkOne({{ $asset->id }})" type="button"
@@ -200,7 +200,7 @@
     </x-nawasara-ui::table>
 
     <p class="mt-4 text-xs text-gray-500 dark:text-neutral-500">
-        Check Page = HTTP probe only (cepat). Tombol Check per record = HTTP + SSL certificate (butuh ~3-5 detik).
-        Data di-cache 30 menit.
+        Worker scheduler menjalankan <code class="font-mono">cloudflare:health-check</code> setiap 15 menit (HTTP) dan harian jam 02:00 (HTTP+SSL).
+        Tombol "Check Page" = manual override HTTP probe untuk halaman ini. Tombol "Check" per-record = HTTP + SSL.
     </p>
 </div>

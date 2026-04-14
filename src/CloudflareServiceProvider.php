@@ -3,9 +3,11 @@
 namespace Nawasara\Cloudflare;
 
 use Livewire\Livewire;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 use Illuminate\Support\ServiceProvider;
+use Nawasara\Cloudflare\Console\Commands\HealthCheckCommand;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 
 class CloudflareServiceProvider extends ServiceProvider
@@ -14,7 +16,26 @@ class CloudflareServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'nawasara-cloudflare');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->registerLivewire();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                HealthCheckCommand::class,
+            ]);
+
+            $this->app->booted(function () {
+                $schedule = $this->app->make(Schedule::class);
+                $schedule->command('cloudflare:health-check --stale=10')
+                    ->everyFifteenMinutes()
+                    ->withoutOverlapping(20)
+                    ->runInBackground();
+                $schedule->command('cloudflare:health-check --ssl --stale=1380')
+                    ->dailyAt('02:00')
+                    ->withoutOverlapping(60)
+                    ->runInBackground();
+            });
+        }
     }
 
     public function register(): void
