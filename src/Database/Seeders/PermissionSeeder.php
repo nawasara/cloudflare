@@ -26,6 +26,7 @@ class PermissionSeeder extends Seeder
             'cloudflare.cache.purge',
             'cloudflare.ddos.view',
             'cloudflare.ddos.manage',
+            'cloudflare.health.view',
         ];
 
         foreach ($permissions as $permission) {

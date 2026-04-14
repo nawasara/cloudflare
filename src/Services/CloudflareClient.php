@@ -539,6 +539,160 @@ class CloudflareClient
         ];
     }
 
+    // ─── Health ─────────────────────────────────────────
+
+    public function getDnssec(string $zoneId): ?array
+    {
+        $response = $this->api()->get("/zones/{$zoneId}/dnssec");
+
+        return $response->successful() ? $response->json('result') : null;
+    }
+
+    /**
+     * Returns ['ok' => bool, 'data' => array, 'error' => ?string].
+     * Graceful when the token lacks "SSL and Certificates:Read".
+     */
+    public function getCertificatePacks(string $zoneId): array
+    {
+        $response = $this->api()->get("/zones/{$zoneId}/ssl/certificate_packs", [
+            'status' => 'all',
+        ]);
+
+        if ($response->successful()) {
+            return ['ok' => true, 'data' => $response->json('result') ?? [], 'error' => null];
+        }
+
+        $error = $response->json('errors.0.message') ?? ('HTTP ' . $response->status());
+        if ($response->status() === 403) {
+            $error = 'Token tidak punya permission "SSL and Certificates:Read"';
+        }
+
+        return ['ok' => false, 'data' => [], 'error' => $error];
+    }
+
+    public function getZoneSetting(string $zoneId, string $setting): ?array
+    {
+        $response = $this->api()->get("/zones/{$zoneId}/settings/{$setting}");
+
+        return $response->successful() ? $response->json('result') : null;
+    }
+
+    /**
+     * Compute aggregated health state for a zone.
+     * Cached for 10 minutes to avoid hammering the API on dashboard refresh.
+     */
+    public function getZoneHealth(array $zone): array
+    {
+        $zoneId = $zone['id'];
+        $cacheKey = "cloudflare_health:{$zoneId}";
+
+        return Cache::remember($cacheKey, 600, function () use ($zone, $zoneId) {
+            $dnssec = $this->getDnssec($zoneId);
+            $packsResult = $this->getCertificatePacks($zoneId);
+            $sslMode = $this->getSslSetting($zoneId);
+            $alwaysOnline = $this->getZoneSetting($zoneId, 'always_online');
+
+            // Find the soonest cert expiry from active certs covering the apex.
+            $soonestExpiry = null;
+            $certStatus = 'none';
+            foreach ($packsResult['data'] as $pack) {
+                foreach ($pack['certificates'] ?? [] as $cert) {
+                    $status = $cert['status'] ?? '';
+                    if (! in_array($status, ['active', 'pending_validation', 'pending_issuance'], true)) {
+                        continue;
+                    }
+                    $expiresOn = $cert['expires_on'] ?? null;
+                    if (! $expiresOn) {
+                        continue;
+                    }
+                    $ts = strtotime($expiresOn);
+                    if ($soonestExpiry === null || $ts < $soonestExpiry) {
+                        $soonestExpiry = $ts;
+                        $certStatus = $status;
+                    }
+                }
+            }
+
+            $daysToExpiry = $soonestExpiry ? (int) floor(($soonestExpiry - time()) / 86400) : null;
+
+            $dnssecStatus = $dnssec['status'] ?? 'unknown';
+
+            $checks = [
+                'ssl_mode' => [
+                    'label' => 'SSL/TLS Mode',
+                    'value' => $sslMode ?? 'unknown',
+                    'state' => match ($sslMode) {
+                        'strict', 'full' => 'ok',
+                        'flexible' => 'warning',
+                        'off' => 'critical',
+                        default => 'unknown',
+                    },
+                ],
+                'cert_expiry' => [
+                    'label' => 'Certificate Expiry',
+                    'value' => match (true) {
+                        ! $packsResult['ok'] => 'tidak bisa dicek',
+                        $daysToExpiry !== null => $daysToExpiry . ' hari',
+                        default => 'no active cert',
+                    },
+                    'days' => $daysToExpiry,
+                    'cert_status' => $certStatus,
+                    'hint' => $packsResult['error'],
+                    'state' => match (true) {
+                        ! $packsResult['ok'] => 'unknown',
+                        $daysToExpiry === null => 'warning',
+                        $daysToExpiry < 0 => 'critical',
+                        $daysToExpiry <= 14 => 'warning',
+                        $daysToExpiry <= 30 => 'warning',
+                        default => 'ok',
+                    },
+                ],
+                'dnssec' => [
+                    'label' => 'DNSSEC',
+                    'value' => $dnssecStatus,
+                    'state' => match ($dnssecStatus) {
+                        'active' => 'ok',
+                        'pending' => 'warning',
+                        'disabled' => 'warning',
+                        default => 'unknown',
+                    },
+                ],
+                'always_online' => [
+                    'label' => 'Always Online',
+                    'value' => $alwaysOnline['value'] ?? 'unknown',
+                    'state' => ($alwaysOnline['value'] ?? null) === 'on' ? 'ok' : 'info',
+                ],
+                'zone_status' => [
+                    'label' => 'Zone Status',
+                    'value' => $zone['status'] ?? 'unknown',
+                    'state' => ($zone['status'] ?? null) === 'active' ? 'ok' : 'warning',
+                ],
+            ];
+
+            // Overall state = worst of all checks (excluding info).
+            $priority = ['critical' => 3, 'warning' => 2, 'unknown' => 1, 'ok' => 0, 'info' => 0];
+            $overall = 'ok';
+            foreach ($checks as $check) {
+                if (($priority[$check['state']] ?? 0) > ($priority[$overall] ?? 0)) {
+                    $overall = $check['state'];
+                }
+            }
+
+            return [
+                'zone_id' => $zoneId,
+                'zone_name' => $zone['name'] ?? '',
+                'overall' => $overall,
+                'checks' => $checks,
+                'refreshed_at' => now()->toIso8601String(),
+            ];
+        });
+    }
+
+    public function forgetZoneHealth(string $zoneId): void
+    {
+        Cache::forget("cloudflare_health:{$zoneId}");
+    }
+
     // ─── Cache ──────────────────────────────────────────
 
     public function purgeAllCache(string $zoneId): bool

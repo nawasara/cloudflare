@@ -37,6 +37,13 @@ return [
                 'permission' => 'cloudflare.analytics.view',
                 'navigate' => true,
             ],
+            [
+                'label' => 'Health',
+                'icon' => 'lucide-activity',
+                'url' => url($prefix.'/health'),
+                'permission' => 'cloudflare.health.view',
+                'navigate' => true,
+            ],
         ],
     ],
 ];
