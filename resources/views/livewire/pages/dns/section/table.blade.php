@@ -15,6 +15,15 @@
             model="typeFilter"
             :items="['all' => 'Semua Type', 'A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV']" />
 
+        @if ($zone)
+            <button wire:click="syncRegistry" type="button"
+                wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
+                class="py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/40 inline-flex items-center gap-1.5">
+                <x-lucide-link class="size-4" wire:loading.class="animate-spin" wire:target="syncRegistry" />
+                Sync ke Registry
+            </button>
+        @endif
+
         <x-slot:chips>
             @if ($typeFilter)
                 <x-nawasara-ui::filter-chip label="Type: {{ $typeFilter }}" model="typeFilter" />
@@ -26,10 +35,11 @@
     </x-nawasara-ui::filter-bar>
 
     @if ($zone)
-        <x-nawasara-ui::table :headers="['Type', 'Name', 'Content', 'Proxied', 'TTL', '']"
+        <x-nawasara-ui::table :headers="['Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', '']"
             :title="'DNS Records (' . count($this->records['result'] ?? []) . ' records)'">
             <x-slot:table>
                 @forelse ($this->records['result'] ?? [] as $record)
+                    @php $asset = $this->assetMap[$record['id']] ?? null; @endphp
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php
@@ -53,6 +63,26 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-neutral-400 max-w-xs truncate font-mono">
                             {{ $record['content'] }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if (! in_array($record['type'], ['A', 'AAAA', 'CNAME']))
+                                <span class="text-gray-300 dark:text-neutral-600">-</span>
+                            @elseif ($asset && $asset->opd)
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $asset->opd->name }}</span>
+                                    @if ($asset->pic)
+                                        <span class="text-xs text-gray-500 dark:text-neutral-400">PIC: {{ $asset->pic->name }}</span>
+                                    @endif
+                                </div>
+                            @elseif ($asset)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                    Belum ditetapkan
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
+                                    Belum di-sync
+                                </span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @if ($record['proxied'] ?? false)
@@ -79,7 +109,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                        <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
                             Tidak ada DNS record ditemukan.
                         </td>
                     </tr>
@@ -167,6 +197,38 @@
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-neutral-600 peer-checked:bg-orange-500"></div>
                     </label>
                     <span class="text-sm text-gray-700 dark:text-neutral-300">Proxied (orange cloud)</span>
+                </div>
+
+                {{-- OPD / PIC Linking --}}
+                <div class="pt-4 border-t border-gray-200 dark:border-neutral-700">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-neutral-300 mb-3">
+                        Kepemilikan (Registry)
+                    </h4>
+                    <p class="text-xs text-gray-500 dark:text-neutral-400 mb-3">
+                        Default mengikuti OPD/PIC zone induk. Ubah kalau record ini milik OPD berbeda.
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <x-nawasara-ui::form.label value="OPD (opsional)" />
+                            <x-nawasara-ui::form.select wire:model.live="formOpdId" placeholder="-- Pilih OPD --">
+                                @foreach ($this->opdList as $opd)
+                                    <option value="{{ $opd->id }}">{{ $opd->code }} - {{ $opd->name }}</option>
+                                @endforeach
+                            </x-nawasara-ui::form.select>
+                        </div>
+
+                        @if ($formOpdId)
+                            <div>
+                                <x-nawasara-ui::form.label value="PIC (opsional)" />
+                                <x-nawasara-ui::form.select wire:model="formPicId" placeholder="-- Pilih PIC --">
+                                    @foreach ($this->picList as $pic)
+                                        <option value="{{ $pic->id }}">{{ $pic->name }}{{ $pic->position ? ' ('.$pic->position.')' : '' }}</option>
+                                    @endforeach
+                                </x-nawasara-ui::form.select>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
 

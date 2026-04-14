@@ -5,6 +5,8 @@ namespace Nawasara\Cloudflare\Livewire\Zone\Section;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Nawasara\Cloudflare\Services\CloudflareClient;
+use Nawasara\Cloudflare\Services\ZoneRegistrySync;
+use Nawasara\Registry\Models\Asset;
 
 class Table extends Component
 {
@@ -126,6 +128,31 @@ class Table extends Component
         cache()->forget('cloudflare_zones');
         unset($this->zones);
         toaster_success('Zone list di-refresh');
+    }
+
+    #[Computed]
+    public function assetMap()
+    {
+        return Asset::query()
+            ->where('package_ref', 'cloudflare')
+            ->whereNotNull('external_id')
+            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->get()
+            ->keyBy('external_id');
+    }
+
+    public function syncRegistry(ZoneRegistrySync $sync)
+    {
+        $stats = $sync->sync();
+        unset($this->assetMap);
+
+        $parts = [];
+        if ($stats['created']) $parts[] = "{$stats['created']} baru";
+        if ($stats['linked']) $parts[] = "{$stats['linked']} terhubung";
+        if ($stats['updated']) $parts[] = "{$stats['updated']} diperbarui";
+        if (! $parts) $parts[] = 'semua up-to-date';
+
+        toaster_success('Sync registry: ' . implode(', ', $parts) . " (dari {$stats['total']} zone)");
     }
 
     public function render()

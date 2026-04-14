@@ -18,7 +18,22 @@
         </select>
     </div>
 
-    @if ($zone && $this->analytics)
+    @if ($zone && !empty($this->analytics['error']))
+        <div class="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+            <div class="flex gap-3">
+                <x-lucide-triangle-alert class="size-5 flex-shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                <div class="text-sm">
+                    <p class="font-semibold text-red-800 dark:text-red-300">Gagal memuat analytics</p>
+                    <p class="mt-1 text-red-700 dark:text-red-400 break-all">{{ $this->analytics['error'] }}</p>
+                    <p class="mt-2 text-xs text-red-600 dark:text-red-400">
+                        Pastikan API Token memiliki permission <code class="font-mono">Account Analytics: Read</code> dan <code class="font-mono">Zone Analytics: Read</code>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($zone && $this->analytics && empty($this->analytics['error']))
         @php
             $totals = $this->analytics['totals'] ?? [];
             $requests = $totals['requests'] ?? [];
@@ -159,12 +174,7 @@
                 </div>
             @endif
         </div>
-    @elseif ($zone && !$this->analytics)
-        <div class="text-center py-12">
-            <x-lucide-bar-chart-3 class="size-12 mx-auto text-gray-300 dark:text-neutral-600" />
-            <p class="mt-3 text-sm text-gray-500 dark:text-neutral-400">Tidak ada data analytics tersedia.</p>
-        </div>
-    @else
+    @elseif (!$zone)
         <div class="text-center py-12">
             <x-lucide-bar-chart-3 class="size-12 mx-auto text-gray-300 dark:text-neutral-600" />
             <p class="mt-3 text-sm text-gray-500 dark:text-neutral-400">Pilih zone terlebih dahulu untuk melihat analytics.</p>

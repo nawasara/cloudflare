@@ -6,6 +6,13 @@
             Refresh
         </button>
 
+        <button wire:click="syncRegistry" type="button"
+            wire:confirm="Sinkronkan daftar zone Cloudflare ke Registry aset?"
+            class="py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/40 inline-flex items-center gap-1.5">
+            <x-lucide-link class="size-4" wire:loading.class="animate-spin" wire:target="syncRegistry" />
+            Sync ke Registry
+        </button>
+
         <x-slot:chips>
             @if ($search)
                 <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
@@ -13,12 +20,31 @@
         </x-slot:chips>
     </x-nawasara-ui::filter-bar>
 
-    <x-nawasara-ui::table :headers="['Domain', 'Status', 'Plan', 'SSL', 'Name Servers', '']" title="Zones ({{ count($this->zones) }} domain)">
+    <x-nawasara-ui::table :headers="['Domain', 'OPD / PIC', 'Status', 'Plan', 'SSL', 'Name Servers', '']" title="Zones ({{ count($this->zones) }} domain)">
         <x-slot:table>
             @forelse ($this->zones as $zone)
+                @php $asset = $this->assetMap[$zone['id']] ?? null; @endphp
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200">
                         {{ $zone['name'] ?? '-' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        @if ($asset && $asset->opd)
+                            <div class="flex flex-col">
+                                <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $asset->opd->name }}</span>
+                                @if ($asset->pic)
+                                    <span class="text-xs text-gray-500 dark:text-neutral-400">PIC: {{ $asset->pic->name }}</span>
+                                @endif
+                            </div>
+                        @elseif ($asset)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                Belum ditetapkan
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
+                                Belum di-sync
+                            </span>
+                        @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @php
@@ -60,7 +86,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                    <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
                         Tidak ada zone ditemukan.
                     </td>
                 </tr>
