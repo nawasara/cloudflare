@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\Firewall\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -68,6 +69,8 @@ class Table extends Component
     #[On('openCreateFirewall')]
     public function openCreate()
     {
+        Gate::authorize('cloudflare.waf.create');
+
         $this->editingId = null;
         $this->formDescription = '';
         $this->formExpression = '';
@@ -78,6 +81,8 @@ class Table extends Component
 
     public function openEdit(string $ruleId)
     {
+        Gate::authorize('cloudflare.waf.edit');
+
         $rule = collect($this->rules)->firstWhere('id', $ruleId);
 
         if (! $rule) {
@@ -94,6 +99,8 @@ class Table extends Component
 
     public function save()
     {
+        Gate::authorize($this->editingId ? 'cloudflare.waf.edit' : 'cloudflare.waf.create');
+
         $this->validate([
             'formExpression' => 'required',
             'formAction' => 'required',
@@ -129,6 +136,8 @@ class Table extends Component
 
     public function deleteRule(string $ruleId)
     {
+        Gate::authorize('cloudflare.waf.delete');
+
         if ($this->cloudflare->deleteFirewallRule($this->zone, $ruleId)) {
             toaster_success('Firewall rule berhasil dihapus');
             unset($this->rules);

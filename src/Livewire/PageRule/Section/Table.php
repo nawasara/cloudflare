@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\PageRule\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -102,12 +103,16 @@ class Table extends Component
     #[On('openCreatePageRule')]
     public function openCreate()
     {
+        Gate::authorize('cloudflare.pagerule.create');
+
         $this->resetForm();
         $this->showForm = true;
     }
 
     public function openEdit(string $ruleId)
     {
+        Gate::authorize('cloudflare.pagerule.edit');
+
         $rule = collect($this->rules)->firstWhere('id', $ruleId);
         if (! $rule) {
             return;
@@ -136,6 +141,8 @@ class Table extends Component
 
     public function save()
     {
+        Gate::authorize($this->editingId ? 'cloudflare.pagerule.edit' : 'cloudflare.pagerule.create');
+
         $this->validate([
             'formTarget' => 'required|string|max:500',
             'formActionType' => 'required|string',
@@ -216,6 +223,8 @@ class Table extends Component
 
     public function toggleStatus(string $ruleId)
     {
+        Gate::authorize('cloudflare.pagerule.edit');
+
         $rule = collect($this->rules)->firstWhere('id', $ruleId);
         if (! $rule) {
             return;
@@ -233,6 +242,8 @@ class Table extends Component
 
     public function deleteRule(string $ruleId)
     {
+        Gate::authorize('cloudflare.pagerule.delete');
+
         if ($this->cloudflare->deletePageRule($this->zone, $ruleId)) {
             toaster_success('Page rule berhasil dihapus');
             unset($this->rules);

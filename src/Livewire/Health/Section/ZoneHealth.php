@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\Health\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Nawasara\Cloudflare\Services\CloudflareClient;
@@ -79,6 +80,8 @@ class ZoneHealth extends Component
 
     public function refreshAll()
     {
+        Gate::authorize('cloudflare.health.view');
+
         foreach ($this->zones as $zone) {
             $this->cloudflare->forgetZoneHealth($zone['id']);
         }

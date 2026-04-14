@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\Zone\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
@@ -66,6 +67,8 @@ class Table extends Component
 
     public function setSslMode(string $mode)
     {
+        Gate::authorize('cloudflare.ssl.manage');
+
         if (! $this->detailZone) {
             return;
         }
@@ -80,6 +83,8 @@ class Table extends Component
 
     public function setSecurityLevel(string $level)
     {
+        Gate::authorize('cloudflare.ddos.manage');
+
         if (! $this->detailZone) {
             return;
         }
@@ -104,6 +109,8 @@ class Table extends Component
 
     public function doPurge()
     {
+        Gate::authorize('cloudflare.cache.purge');
+
         $success = false;
 
         if ($this->purgeType === 'all') {
@@ -145,6 +152,8 @@ class Table extends Component
 
     public function syncRegistry(ZoneRegistrySync $sync)
     {
+        Gate::authorize('cloudflare.zone.view');
+
         $stats = $sync->sync();
         unset($this->assetMap);
 

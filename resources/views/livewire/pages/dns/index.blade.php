@@ -4,7 +4,8 @@
 
         <x-slot name="actions">
             <x-nawasara-ui::page.actions>
-                <x-nawasara-ui::button wire:click="$dispatch('openCreateDns')" color="success">
+                <x-nawasara-ui::button wire:click="$dispatch('openCreateDns')" color="success"
+                    permission="cloudflare.dns.create">
                     <x-slot:icon><x-lucide-plus class="size-4" /></x-slot:icon>
                     Tambah Record
                 </x-nawasara-ui::button>

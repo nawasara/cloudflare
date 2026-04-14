@@ -10,7 +10,8 @@
 
             <x-nawasara-ui::button color="primary" variant="flat" size="sm"
                 wire:click="syncRegistry"
-                wire:confirm="Sinkronkan daftar zone Cloudflare ke Registry aset?">
+                wire:confirm="Sinkronkan daftar zone Cloudflare ke Registry aset?"
+                permission="cloudflare.zone.view">
                 <x-slot:icon>
                     <x-lucide-link wire:loading.class="animate-spin" wire:target="syncRegistry" />
                 </x-slot:icon>
@@ -83,9 +84,9 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <x-nawasara-ui::dropdown-menu-action :id="$zone['id']" :items="[
-                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail(\'' . $zone['id'] . '\')', 'icon' => 'lucide-eye'],
-                            ['type' => 'click', 'label' => 'Purge Cache', 'wire:click' => 'openPurge(\'' . $zone['id'] . '\', \'' . $zone['name'] . '\')', 'icon' => 'lucide-trash-2'],
-                            ['type' => 'link', 'label' => 'DNS Records', 'href' => url('nawasara-cloudflare/dns?zone=' . $zone['id']), 'icon' => 'lucide-list', 'navigate' => true],
+                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail(\'' . $zone['id'] . '\')', 'icon' => 'lucide-eye', 'permission' => 'cloudflare.zone.view'],
+                            ['type' => 'click', 'label' => 'Purge Cache', 'wire:click' => 'openPurge(\'' . $zone['id'] . '\', \'' . $zone['name'] . '\')', 'icon' => 'lucide-trash-2', 'permission' => 'cloudflare.cache.purge'],
+                            ['type' => 'link', 'label' => 'DNS Records', 'href' => url('nawasara-cloudflare/dns?zone=' . $zone['id']), 'icon' => 'lucide-list', 'navigate' => true, 'permission' => 'cloudflare.dns.view'],
                         ]" />
                     </td>
                 </tr>

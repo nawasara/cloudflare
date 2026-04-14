@@ -43,8 +43,8 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <x-nawasara-ui::dropdown-menu-action :id="$rule['id']" :items="[
-                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $rule['id'] . '\')', 'icon' => 'lucide-pencil'],
-                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRule(\'' . $rule['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus rule ini?'],
+                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $rule['id'] . '\')', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.waf.edit'],
+                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRule(\'' . $rule['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus rule ini?', 'permission' => 'cloudflare.waf.delete'],
                             ]" />
                         </td>
                     </tr>

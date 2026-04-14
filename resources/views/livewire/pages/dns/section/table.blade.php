@@ -12,7 +12,8 @@
             @if ($zone)
                 <x-nawasara-ui::button color="primary" variant="flat" size="sm"
                     wire:click="syncRegistry"
-                    wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?">
+                    wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
+                    permission="cloudflare.dns.view">
                     <x-slot:icon>
                         <x-lucide-link wire:loading.class="animate-spin" wire:target="syncRegistry" />
                     </x-slot:icon>
@@ -99,8 +100,8 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <x-nawasara-ui::dropdown-menu-action :id="$record['id']" :items="[
-                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $record['id'] . '\')', 'icon' => 'lucide-pencil'],
-                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRecord(\'' . $record['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus record ini?'],
+                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $record['id'] . '\')', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.dns.edit'],
+                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRecord(\'' . $record['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus record ini?', 'permission' => 'cloudflare.dns.delete'],
                             ]" />
                         </td>
                     </tr>

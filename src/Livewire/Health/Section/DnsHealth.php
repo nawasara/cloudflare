@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\Health\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
@@ -127,6 +128,8 @@ class DnsHealth extends Component
 
     public function checkOne(int $assetId)
     {
+        Gate::authorize('cloudflare.health.view');
+
         $asset = Asset::find($assetId);
         if (! $asset) return;
 
@@ -137,6 +140,8 @@ class DnsHealth extends Component
 
     public function checkPage()
     {
+        Gate::authorize('cloudflare.health.view');
+
         $ids = $this->items->pluck('identifier')->all();
         if (empty($ids)) {
             toaster_error('Tidak ada record untuk dicek');

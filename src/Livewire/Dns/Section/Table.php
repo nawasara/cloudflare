@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Livewire\Dns\Section;
 
+use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -118,6 +119,8 @@ class Table extends Component
     #[On('openCreateDns')]
     public function openCreate()
     {
+        Gate::authorize('cloudflare.dns.create');
+
         $this->resetForm();
         // Default OPD/PIC dari zone asset (inherited).
         if ($this->zone) {
@@ -132,6 +135,8 @@ class Table extends Component
 
     public function openEdit(string $recordId)
     {
+        Gate::authorize('cloudflare.dns.edit');
+
         $records = $this->records['result'] ?? [];
         $record = collect($records)->firstWhere('id', $recordId);
 
@@ -196,6 +201,8 @@ class Table extends Component
 
     public function save()
     {
+        Gate::authorize($this->editingId ? 'cloudflare.dns.edit' : 'cloudflare.dns.create');
+
         $this->validate([
             'formType' => 'required',
             'formName' => 'required',
@@ -243,6 +250,8 @@ class Table extends Component
 
     public function deleteRecord(string $recordId)
     {
+        Gate::authorize('cloudflare.dns.delete');
+
         if ($this->cloudflare->deleteDnsRecord($this->zone, $recordId)) {
             app(DnsRegistrySync::class)->unlinkRecord($recordId);
             toaster_success('DNS record berhasil dihapus');
@@ -271,6 +280,8 @@ class Table extends Component
 
     public function syncRegistry(DnsRegistrySync $sync)
     {
+        Gate::authorize('cloudflare.dns.view');
+
         if (! $this->zone) {
             toaster_error('Pilih zone terlebih dahulu');
             return;
