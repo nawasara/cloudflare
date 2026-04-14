@@ -539,6 +539,78 @@ class CloudflareClient
         ];
     }
 
+    // ─── Audit Logs ─────────────────────────────────────
+
+    /**
+     * Fetch account-level audit logs from Cloudflare.
+     * Returns ['ok' => bool, 'data' => [], 'result_info' => [], 'error' => ?string].
+     * Graceful when the token lacks "Audit Logs:Read".
+     *
+     * Supported params (Cloudflare API):
+     *   since, before (RFC3339 datetime)
+     *   actor.email, actor.ip
+     *   zone.name
+     *   direction (asc|desc), page, per_page
+     */
+    public function getAuditLogs(array $params = []): array
+    {
+        $creds = $this->credentials();
+        $accountId = $creds['account_id'];
+        if (! $accountId) {
+            return $this->emptyAuditLogs('Account ID belum dikonfigurasi di Vault');
+        }
+
+        $defaults = [
+            'per_page' => 25,
+            'page' => 1,
+            'direction' => 'desc',
+        ];
+
+        // Audit logs endpoint requires Global API Key (legacy auth) or
+        // super-admin role; standard API tokens cannot access it. If
+        // Vault has a global_api_key + email, use that for this call.
+        $globalKey = Vault::has('cloudflare', 'global_api_key') ? Vault::get('cloudflare', 'global_api_key') : null;
+        $email = Vault::has('cloudflare', 'email') ? Vault::get('cloudflare', 'email') : null;
+
+        if ($globalKey && $email) {
+            $response = Http::baseUrl('https://api.cloudflare.com/client/v4')
+                ->withHeaders([
+                    'X-Auth-Email' => $email,
+                    'X-Auth-Key' => $globalKey,
+                ])
+                ->acceptJson()
+                ->timeout(15)
+                ->get("/accounts/{$accountId}/audit_logs", array_merge($defaults, $params));
+        } else {
+            $response = $this->api()->get("/accounts/{$accountId}/audit_logs", array_merge($defaults, $params));
+        }
+
+        if (! $response->successful()) {
+            $msg = $response->json('errors.0.message') ?? ('HTTP ' . $response->status());
+            if ($response->status() === 403 || $response->status() === 401) {
+                $msg = 'API Token tidak bisa akses audit log. Endpoint ini membutuhkan Global API Key (legacy auth) atau role super-administrator pada account.';
+            }
+            return $this->emptyAuditLogs($msg);
+        }
+
+        return [
+            'ok' => true,
+            'data' => $response->json('result', []),
+            'result_info' => $response->json('result_info', []),
+            'error' => null,
+        ];
+    }
+
+    protected function emptyAuditLogs(?string $error = null): array
+    {
+        return [
+            'ok' => false,
+            'data' => [],
+            'result_info' => [],
+            'error' => $error,
+        ];
+    }
+
     // ─── Health ─────────────────────────────────────────
 
     public function getDnssec(string $zoneId): ?array

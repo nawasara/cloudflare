@@ -44,6 +44,13 @@ return [
                 'permission' => 'cloudflare.health.view',
                 'navigate' => true,
             ],
+            [
+                'label' => 'Audit Log',
+                'icon' => 'lucide-scroll-text',
+                'url' => url($prefix.'/audit'),
+                'permission' => 'cloudflare.audit.view',
+                'navigate' => true,
+            ],
         ],
     ],
 ];

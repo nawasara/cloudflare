@@ -6,6 +6,7 @@ use Nawasara\Cloudflare\Livewire\Dns\Index as DnsIndex;
 use Nawasara\Cloudflare\Livewire\Firewall\Index as FirewallIndex;
 use Nawasara\Cloudflare\Livewire\Analytics\Index as AnalyticsIndex;
 use Nawasara\Cloudflare\Livewire\Health\Index as HealthIndex;
+use Nawasara\Cloudflare\Livewire\Audit\Index as AuditIndex;
 
 Route::middleware(['web', 'auth'])->prefix('nawasara-cloudflare')->group(function () {
     Route::get('zones', ZoneIndex::class)->name('nawasara-cloudflare.zone.index');
@@ -13,4 +14,5 @@ Route::middleware(['web', 'auth'])->prefix('nawasara-cloudflare')->group(functio
     Route::get('firewall', FirewallIndex::class)->name('nawasara-cloudflare.firewall.index');
     Route::get('analytics', AnalyticsIndex::class)->name('nawasara-cloudflare.analytics.index');
     Route::get('health', HealthIndex::class)->name('nawasara-cloudflare.health.index');
+    Route::get('audit', AuditIndex::class)->name('nawasara-cloudflare.audit.index');
 });
