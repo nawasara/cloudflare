@@ -1,13 +1,9 @@
 <div>
-    <x-nawasara-ui::filter-bar searchPlaceholder="">
-        {{-- Zone Selector --}}
-        <select wire:model.live="zone"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-            <option value="">-- Pilih Zone --</option>
-            @foreach ($this->zones as $z)
-                <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
-            @endforeach
-        </select>
+    @php $currentZoneName = collect($this->zones)->firstWhere('id', $zone)['name'] ?? null; @endphp
+    <x-nawasara-ui::filter-bar>
+        <x-nawasara-ui::filter-dropdown
+            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            model="zone" :items="$this->zoneOptions" />
     </x-nawasara-ui::filter-bar>
 
     @if ($zone)
@@ -71,44 +67,33 @@
     {{-- Create/Edit Modal --}}
     <x-nawasara-ui::modal wire:model="showForm" maxWidth="lg" :title="$editingId ? 'Edit Firewall Rule' : 'Tambah Firewall Rule'">
         <form wire:submit="save" id="cf-firewall-form" class="space-y-4">
-            <x-nawasara-ui::form.input label="Deskripsi" wire:model="formDescription" placeholder="Block bad bots" />
+            <x-nawasara-ui::form.input label="Deskripsi" wire:model="formDescription"
+                placeholder="Block bad bots" />
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">Expression (Cloudflare filter)</label>
-                <textarea wire:model="formExpression" rows="3"
-                    class="w-full text-sm font-mono border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white"
-                    placeholder='(ip.src eq 1.2.3.4) or (http.user_agent contains "BadBot")'></textarea>
-                @error('formExpression') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-            </div>
+            <x-nawasara-ui::form.textarea label="Expression (Cloudflare filter)"
+                wire:model="formExpression" name="formExpression" rows="3"
+                class="font-mono"
+                placeholder='(ip.src eq 1.2.3.4) or (http.user_agent contains "BadBot")' />
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">Action</label>
-                    <select wire:model="formAction"
-                        class="w-full py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-                        <option value="block">Block</option>
-                        <option value="challenge">Challenge (CAPTCHA)</option>
-                        <option value="js_challenge">JS Challenge</option>
-                        <option value="managed_challenge">Managed Challenge</option>
-                        <option value="allow">Allow</option>
-                        <option value="log">Log</option>
-                    </select>
-                </div>
+            <div class="grid grid-cols-2 gap-4 items-end">
+                <x-nawasara-ui::form.select label="Action" wire:model="formAction" name="formAction" :placeholder="false">
+                    <option value="block">Block</option>
+                    <option value="challenge">Challenge (CAPTCHA)</option>
+                    <option value="js_challenge">JS Challenge</option>
+                    <option value="managed_challenge">Managed Challenge</option>
+                    <option value="allow">Allow</option>
+                    <option value="log">Log</option>
+                </x-nawasara-ui::form.select>
 
-                <div class="flex items-end pb-1">
-                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300">
-                        <input type="checkbox" wire:model="formPaused" class="rounded border-gray-300 text-blue-600 dark:bg-neutral-800 dark:border-neutral-700">
-                        Paused (nonaktif)
-                    </label>
+                <div class="pb-3">
+                    <x-nawasara-ui::form.checkbox label="Paused (nonaktif)" wire:model="formPaused" />
                 </div>
             </div>
-
         </form>
 
         <x-slot:footer>
-            <button type="button" wire:click="$set('showForm', false)" class="py-2.5 px-4 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">Batal</button>
+            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showForm', false)">Batal</x-nawasara-ui::button>
             <x-nawasara-ui::button type="submit" form="cf-firewall-form" color="primary">{{ $editingId ? 'Update' : 'Simpan' }}</x-nawasara-ui::button>
         </x-slot:footer>
-        </form>
     </x-nawasara-ui::modal>
 </div>

@@ -4,12 +4,14 @@ namespace Nawasara\Cloudflare\Livewire\Zone\Section;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Cloudflare\Services\ZoneRegistrySync;
 use Nawasara\Registry\Models\Asset;
 
 class Table extends Component
 {
+    #[Url(except: '')]
     public string $search = '';
 
     // Detail modal

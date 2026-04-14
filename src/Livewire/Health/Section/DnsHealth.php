@@ -5,6 +5,7 @@ namespace Nawasara\Cloudflare\Livewire\Health\Section;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Nawasara\Cloudflare\Models\EndpointHealth;
 use Nawasara\Cloudflare\Services\DnsHealthChecker;
 use Nawasara\Registry\Models\Asset;
@@ -14,8 +15,13 @@ class DnsHealth extends Component
 {
     use WithPagination;
 
+    #[Url(except: '')]
     public string $search = '';
+
+    #[Url(except: '')]
     public $opdFilter = '';
+
+    #[Url(except: '')]
     public string $stateFilter = '';
 
     public function updatedSearch() { $this->resetPage(); }
@@ -31,6 +37,16 @@ class DnsHealth extends Component
                 ->where('type', 'subdomain'))
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
+    }
+
+    #[Computed]
+    public function opdOptions(): array
+    {
+        return collect(['all' => 'Semua OPD'])
+            ->merge(
+                $this->opdList->mapWithKeys(fn ($o) => [(string) $o->id => $o->code . ' - ' . $o->name])
+            )
+            ->all();
     }
 
     #[Computed]

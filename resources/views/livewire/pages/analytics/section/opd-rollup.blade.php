@@ -1,23 +1,16 @@
 <div>
-    <div class="flex flex-wrap items-center gap-3 mb-6">
-        {{-- OPD Selector --}}
-        <select wire:model.live="opdId"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white min-w-[240px]">
-            <option value="">-- Pilih OPD --</option>
-            @foreach ($this->opdList as $opd)
-                <option value="{{ $opd->id }}">{{ $opd->code }} - {{ $opd->name }}</option>
-            @endforeach
-        </select>
-
-        {{-- Period Selector --}}
-        <select wire:model.live="period"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-            <option value="-1440">24 Jam</option>
-            <option value="-4320">3 Hari</option>
-            <option value="-10080">7 Hari</option>
-            <option value="-43200">30 Hari</option>
-        </select>
-    </div>
+    @php
+        $periods = \Nawasara\Cloudflare\Livewire\Analytics\Section\OpdRollup::PERIOD_OPTIONS;
+        $currentOpdName = $this->opdList->firstWhere('id', $opdId)?->name;
+    @endphp
+    <x-nawasara-ui::filter-bar>
+        <x-nawasara-ui::filter-dropdown
+            :label="$currentOpdName ? 'OPD: ' . $currentOpdName : 'OPD'"
+            model="opdId" :items="$this->opdOptions" />
+        <x-nawasara-ui::filter-dropdown
+            :label="'Periode: ' . ($periods[$period] ?? '24 Jam')"
+            model="period" :items="$periods" />
+    </x-nawasara-ui::filter-bar>
 
     @if (! $opdId)
         <div class="text-center py-12">

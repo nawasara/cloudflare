@@ -1,28 +1,25 @@
 <div>
+    @php $currentZoneName = collect($this->zones)->firstWhere('id', $zone)['name'] ?? null; @endphp
     <x-nawasara-ui::filter-bar searchPlaceholder="Cari nama record..." searchModel="search">
-        {{-- Zone Selector --}}
-        <select wire:model.live="zone"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-            <option value="">-- Pilih Zone --</option>
-            @foreach ($this->zones as $z)
-                <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
-            @endforeach
-        </select>
-
-        {{-- Type Filter --}}
         <x-nawasara-ui::filter-dropdown
-            label="Type"
-            model="typeFilter"
+            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            model="zone" :items="$this->zoneOptions" />
+
+        <x-nawasara-ui::filter-dropdown label="Type" model="typeFilter"
             :items="['all' => 'Semua Type', 'A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV']" />
 
-        @if ($zone)
-            <button wire:click="syncRegistry" type="button"
-                wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
-                class="py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/40 inline-flex items-center gap-1.5">
-                <x-lucide-link class="size-4" wire:loading.class="animate-spin" wire:target="syncRegistry" />
-                Sync ke Registry
-            </button>
-        @endif
+        <x-slot:actions>
+            @if ($zone)
+                <x-nawasara-ui::button color="primary" variant="flat" size="sm"
+                    wire:click="syncRegistry"
+                    wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?">
+                    <x-slot:icon>
+                        <x-lucide-link wire:loading.class="animate-spin" wire:target="syncRegistry" />
+                    </x-slot:icon>
+                    Sync ke Registry
+                </x-nawasara-ui::button>
+            @endif
+        </x-slot:actions>
 
         <x-slot:chips>
             @if ($typeFilter)
@@ -150,29 +147,22 @@
     <x-nawasara-ui::modal wire:model="showForm" maxWidth="lg" :title="$editingId ? 'Edit DNS Record' : 'Tambah DNS Record'">
         <form wire:submit="save" id="cf-dns-form" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">Type</label>
-                    <select wire:model.live="formType" @disabled($editingId)
-                        class="w-full py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-                        @foreach (['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV'] as $type)
-                            <option value="{{ $type }}">{{ $type }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                <x-nawasara-ui::form.select label="Type" wire:model.live="formType" name="formType"
+                    :placeholder="false" :disabled="(bool) $editingId">
+                    @foreach (['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV'] as $type)
+                        <option value="{{ $type }}">{{ $type }}</option>
+                    @endforeach
+                </x-nawasara-ui::form.select>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">TTL</label>
-                    <select wire:model="formTtl"
-                        class="w-full py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-                        <option value="1">Auto</option>
-                        <option value="60">1 min</option>
-                        <option value="300">5 min</option>
-                        <option value="600">10 min</option>
-                        <option value="1800">30 min</option>
-                        <option value="3600">1 hour</option>
-                        <option value="86400">1 day</option>
-                    </select>
-                </div>
+                <x-nawasara-ui::form.select label="TTL" wire:model="formTtl" name="formTtl" :placeholder="false">
+                    <option value="1">Auto</option>
+                    <option value="60">1 min</option>
+                    <option value="300">5 min</option>
+                    <option value="600">10 min</option>
+                    <option value="1800">30 min</option>
+                    <option value="3600">1 hour</option>
+                    <option value="86400">1 day</option>
+                </x-nawasara-ui::form.select>
             </div>
 
             <x-nawasara-ui::form.input label="Name" wire:model="formName" placeholder="subdomain atau @ untuk root" useError errorVariable="formName" />
@@ -209,24 +199,20 @@
                     </p>
 
                     <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <x-nawasara-ui::form.label value="OPD (opsional)" />
-                            <x-nawasara-ui::form.select wire:model.live="formOpdId" placeholder="-- Pilih OPD --">
-                                @foreach ($this->opdList as $opd)
-                                    <option value="{{ $opd->id }}">{{ $opd->code }} - {{ $opd->name }}</option>
-                                @endforeach
-                            </x-nawasara-ui::form.select>
-                        </div>
+                        <x-nawasara-ui::form.select label="OPD (opsional)"
+                            wire:model.live="formOpdId" placeholder="-- Pilih OPD --">
+                            @foreach ($this->opdList as $opd)
+                                <option value="{{ $opd->id }}">{{ $opd->code }} - {{ $opd->name }}</option>
+                            @endforeach
+                        </x-nawasara-ui::form.select>
 
                         @if ($formOpdId)
-                            <div>
-                                <x-nawasara-ui::form.label value="PIC (opsional)" />
-                                <x-nawasara-ui::form.select wire:model="formPicId" placeholder="-- Pilih PIC --">
-                                    @foreach ($this->picList as $pic)
-                                        <option value="{{ $pic->id }}">{{ $pic->name }}{{ $pic->position ? ' ('.$pic->position.')' : '' }}</option>
-                                    @endforeach
-                                </x-nawasara-ui::form.select>
-                            </div>
+                            <x-nawasara-ui::form.select label="PIC (opsional)"
+                                wire:model="formPicId" placeholder="-- Pilih PIC --">
+                                @foreach ($this->picList as $pic)
+                                    <option value="{{ $pic->id }}">{{ $pic->name }}{{ $pic->position ? ' ('.$pic->position.')' : '' }}</option>
+                                @endforeach
+                            </x-nawasara-ui::form.select>
                         @endif
                     </div>
                 </div>
@@ -235,7 +221,7 @@
         </form>
 
         <x-slot:footer>
-            <button type="button" wire:click="$set('showForm', false)" class="py-2.5 px-4 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">Batal</button>
+            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showForm', false)">Batal</x-nawasara-ui::button>
             <x-nawasara-ui::button type="submit" form="cf-dns-form" color="primary">{{ $editingId ? 'Update' : 'Simpan' }}</x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>

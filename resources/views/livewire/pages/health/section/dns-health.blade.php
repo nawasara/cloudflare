@@ -63,21 +63,22 @@
     </div>
 
     {{-- Filter Bar --}}
+    @php $currentOpdName = $this->opdList->firstWhere('id', $opdFilter)?->name; @endphp
     <x-nawasara-ui::filter-bar searchPlaceholder="Cari subdomain..." searchModel="search">
-        <select wire:model.live="opdFilter"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white min-w-[200px]">
-            <option value="">Semua OPD</option>
-            @foreach ($this->opdList as $opd)
-                <option value="{{ $opd->id }}">{{ $opd->code }} - {{ $opd->name }}</option>
-            @endforeach
-        </select>
+        <x-nawasara-ui::filter-dropdown
+            :label="$currentOpdName ? 'OPD: ' . $currentOpdName : 'OPD'"
+            model="opdFilter" :items="$this->opdOptions" />
 
-        <button wire:click="checkPage" type="button"
-            wire:confirm="Check HTTP semua record di halaman ini? (~10-15 detik)"
-            class="py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/40 inline-flex items-center gap-1.5">
-            <x-lucide-radar class="size-4" wire:loading.class="animate-spin" wire:target="checkPage" />
-            Check Page
-        </button>
+        <x-slot:actions>
+            <x-nawasara-ui::button color="primary" variant="flat" size="sm"
+                wire:click="checkPage"
+                wire:confirm="Check HTTP semua record di halaman ini? (~10-15 detik)">
+                <x-slot:icon>
+                    <x-lucide-radar wire:loading.class="animate-spin" wire:target="checkPage" />
+                </x-slot:icon>
+                Check Page
+            </x-nawasara-ui::button>
+        </x-slot:actions>
 
         <x-slot:chips>
             @if ($stateFilter)
@@ -174,11 +175,13 @@
                         {{ $h && $h->checked_at ? $h->checked_at->diffForHumans() : '-' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <button wire:click="checkOne({{ $asset->id }})" type="button"
-                            class="px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700 inline-flex items-center gap-1">
-                            <x-lucide-radar class="size-3" wire:loading.class="animate-spin" wire:target="checkOne({{ $asset->id }})" />
+                        <x-nawasara-ui::button color="neutral" variant="outline" size="sm"
+                            wire:click="checkOne({{ $asset->id }})">
+                            <x-slot:icon>
+                                <x-lucide-radar wire:loading.class="animate-spin" wire:target="checkOne({{ $asset->id }})" />
+                            </x-slot:icon>
                             Check
-                        </button>
+                        </x-nawasara-ui::button>
                     </td>
                 </tr>
             @empty

@@ -40,10 +40,26 @@ class Table extends Component
         $this->cloudflare = $cloudflare;
     }
 
+    public function mount(): void
+    {
+        if (! $this->zone) {
+            $zones = $this->cloudflare->getCachedZones();
+            $this->zone = $zones[0]['id'] ?? '';
+        }
+    }
+
     #[Computed]
     public function zones()
     {
         return $this->cloudflare->getCachedZones();
+    }
+
+    #[Computed]
+    public function zoneOptions(): array
+    {
+        return collect($this->zones)
+            ->mapWithKeys(fn ($z) => [$z['id'] => $z['name']])
+            ->all();
     }
 
     #[Computed]

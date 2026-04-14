@@ -1,10 +1,11 @@
 <div>
     <div class="flex items-center justify-end mb-4">
-        <button wire:click="refreshAll" type="button"
-            class="py-2 px-3 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700 inline-flex items-center gap-1.5">
-            <x-lucide-refresh-cw class="size-4" wire:loading.class="animate-spin" wire:target="refreshAll" />
+        <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshAll">
+            <x-slot:icon>
+                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshAll" />
+            </x-slot:icon>
             Refresh
-        </button>
+        </x-nawasara-ui::button>
     </div>
 
     @php $summary = $this->summary; @endphp

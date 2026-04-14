@@ -1,22 +1,16 @@
 <div>
-    <div class="flex flex-wrap items-center gap-3 mb-6">
-        {{-- Zone Selector --}}
-        <select wire:model.live="zone"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-            <option value="">-- Pilih Zone --</option>
-            @foreach ($this->zones as $z)
-                <option value="{{ $z['id'] }}">{{ $z['name'] }}</option>
-            @endforeach
-        </select>
-
-        {{-- Period Selector --}}
-        <select wire:model.live="period"
-            class="py-2 px-3 text-sm border-gray-200 rounded-lg dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">
-            <option value="-1440">24 Jam</option>
-            <option value="-10080">7 Hari</option>
-            <option value="-43200">30 Hari</option>
-        </select>
-    </div>
+    @php
+        $periods = \Nawasara\Cloudflare\Livewire\Analytics\Section\Overview::PERIOD_OPTIONS;
+        $currentZoneName = collect($this->zones)->firstWhere('id', $zone)['name'] ?? null;
+    @endphp
+    <x-nawasara-ui::filter-bar>
+        <x-nawasara-ui::filter-dropdown
+            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            model="zone" :items="$this->zoneOptions" />
+        <x-nawasara-ui::filter-dropdown
+            :label="'Periode: ' . ($periods[$period] ?? '24 Jam')"
+            model="period" :items="$periods" />
+    </x-nawasara-ui::filter-bar>
 
     @if ($zone && !empty($this->analytics['error']))
         <div class="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">

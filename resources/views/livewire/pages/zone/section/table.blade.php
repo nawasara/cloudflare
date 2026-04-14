@@ -1,17 +1,22 @@
 <div>
     <x-nawasara-ui::filter-bar searchPlaceholder="Cari domain..." searchModel="search">
-        <button wire:click="refreshZones" type="button"
-            class="py-2 px-3 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-700 inline-flex items-center gap-1.5">
-            <x-lucide-refresh-cw class="size-4" wire:loading.class="animate-spin" wire:target="refreshZones" />
-            Refresh
-        </button>
+        <x-slot:actions>
+            <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshZones">
+                <x-slot:icon>
+                    <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshZones" />
+                </x-slot:icon>
+                Refresh
+            </x-nawasara-ui::button>
 
-        <button wire:click="syncRegistry" type="button"
-            wire:confirm="Sinkronkan daftar zone Cloudflare ke Registry aset?"
-            class="py-2 px-3 text-sm font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/40 inline-flex items-center gap-1.5">
-            <x-lucide-link class="size-4" wire:loading.class="animate-spin" wire:target="syncRegistry" />
-            Sync ke Registry
-        </button>
+            <x-nawasara-ui::button color="primary" variant="flat" size="sm"
+                wire:click="syncRegistry"
+                wire:confirm="Sinkronkan daftar zone Cloudflare ke Registry aset?">
+                <x-slot:icon>
+                    <x-lucide-link wire:loading.class="animate-spin" wire:target="syncRegistry" />
+                </x-slot:icon>
+                Sync ke Registry
+            </x-nawasara-ui::button>
+        </x-slot:actions>
 
         <x-slot:chips>
             @if ($search)
@@ -108,17 +113,16 @@
                 {{-- SSL Mode --}}
                 <div>
                     <h4 class="font-semibold text-gray-700 dark:text-neutral-300 mb-2">SSL/TLS Mode</h4>
-                    <div class="flex gap-2">
+                    <x-nawasara-ui::button-group>
                         @foreach (['off', 'flexible', 'full', 'strict'] as $mode)
-                            <button wire:click="setSslMode('{{ $mode }}')"
-                                class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
-                                    {{ $detailSsl === $mode
-                                        ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700 dark:hover:bg-neutral-700' }}">
+                            <x-nawasara-ui::button size="sm"
+                                color="{{ $detailSsl === $mode ? 'primary' : 'neutral' }}"
+                                variant="{{ $detailSsl === $mode ? 'solid' : 'outline' }}"
+                                wire:click="setSslMode('{{ $mode }}')">
                                 {{ ucfirst($mode) }}
-                            </button>
+                            </x-nawasara-ui::button>
                         @endforeach
-                    </div>
+                    </x-nawasara-ui::button-group>
                 </div>
 
                 {{-- Security Level / Under Attack Mode --}}
@@ -152,20 +156,27 @@
                     </div>
 
                     {{-- Security Level Buttons --}}
-                    <div class="flex flex-wrap gap-2">
+                    <x-nawasara-ui::button-group>
                         @foreach (['off' => 'Off', 'essentially_off' => 'Essentially Off', 'low' => 'Low', 'medium' => 'Medium', 'high' => 'High', 'under_attack' => 'Under Attack'] as $level => $label)
-                            <button wire:click="setSecurityLevel('{{ $level }}')"
-                                @if($level === 'under_attack') wire:confirm="Aktifkan Under Attack Mode?" @endif
-                                class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors
-                                    {{ $detailSecurityLevel === $level
-                                        ? ($level === 'under_attack'
-                                            ? 'bg-red-600 text-white border-red-600'
-                                            : 'bg-blue-600 text-white border-blue-600')
-                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700 dark:hover:bg-neutral-700' }}">
-                                {{ $label }}
-                            </button>
+                            @php
+                                $isActive = $detailSecurityLevel === $level;
+                                $color = $isActive ? ($level === 'under_attack' ? 'danger' : 'primary') : 'neutral';
+                                $variant = $isActive ? 'solid' : 'outline';
+                            @endphp
+                            @if ($level === 'under_attack')
+                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
+                                    wire:click="setSecurityLevel('{{ $level }}')"
+                                    wire:confirm="Aktifkan Under Attack Mode?">
+                                    {{ $label }}
+                                </x-nawasara-ui::button>
+                            @else
+                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
+                                    wire:click="setSecurityLevel('{{ $level }}')">
+                                    {{ $label }}
+                                </x-nawasara-ui::button>
+                            @endif
                         @endforeach
-                    </div>
+                    </x-nawasara-ui::button-group>
                 </div>
 
                 {{-- Name Servers --}}
@@ -182,7 +193,7 @@
             </div>
 
             <x-slot:footer>
-                <button wire:click="closeDetail" class="py-2 px-4 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">Tutup</button>
+                <x-nawasara-ui::button color="neutral" variant="outline" wire:click="closeDetail">Tutup</x-nawasara-ui::button>
             </x-slot:footer>
         @endif
     </x-nawasara-ui::modal>
@@ -217,8 +228,8 @@
         </div>
 
         <x-slot:footer>
-            <button wire:click="$set('showPurge', false)" class="py-2 px-4 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white">Batal</button>
-            <x-nawasara-ui::button wire:click="doPurge" color="danger">Purge Cache</x-nawasara-ui::button>
+            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showPurge', false)">Batal</x-nawasara-ui::button>
+            <x-nawasara-ui::button color="danger" wire:click="doPurge">Purge Cache</x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>
 </div>

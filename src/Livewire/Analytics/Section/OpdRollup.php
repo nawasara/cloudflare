@@ -4,13 +4,17 @@ namespace Nawasara\Cloudflare\Livewire\Analytics\Section;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Registry\Models\Opd;
 
 class OpdRollup extends Component
 {
+    #[Url(except: '')]
     public $opdId = '';
+
+    #[Url]
     public string $period = '-1440';
 
     protected CloudflareClient $cloudflare;
@@ -19,6 +23,13 @@ class OpdRollup extends Component
     {
         $this->cloudflare = $cloudflare;
     }
+
+    public const PERIOD_OPTIONS = [
+        '-1440' => '24 Jam',
+        '-4320' => '3 Hari',
+        '-10080' => '7 Hari',
+        '-43200' => '30 Hari',
+    ];
 
     #[Computed]
     public function opdList()
@@ -29,6 +40,14 @@ class OpdRollup extends Component
                 ->where('type', 'domain'))
             ->orderBy('name')
             ->get(['id', 'name', 'code']);
+    }
+
+    #[Computed]
+    public function opdOptions(): array
+    {
+        return $this->opdList
+            ->mapWithKeys(fn ($o) => [(string) $o->id => $o->code . ' - ' . $o->name])
+            ->all();
     }
 
     #[Computed]
