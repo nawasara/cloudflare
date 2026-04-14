@@ -19,7 +19,15 @@ class DnsRegistrySync
      */
     public function syncZone(string $zoneId): array
     {
-        $stats = ['total' => 0, 'created' => 0, 'linked' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0];
+        $stats = [
+            'total' => 0,
+            'created' => 0,
+            'linked' => 0,
+            'updated' => 0,
+            'unchanged' => 0,
+            'skipped' => 0,
+            'deactivated' => 0,
+        ];
 
         $zone = $this->cloudflare->getZone($zoneId);
         if (! $zone) {
@@ -32,17 +40,47 @@ class DnsRegistrySync
 
         [$defaultOpdId, $defaultPicId] = $this->parentDefaults($zoneId);
 
+        $seenRecordIds = [];
+
         foreach ($records as $record) {
             if (! $this->isTrackable($record, $zoneName)) {
                 $stats['skipped']++;
                 continue;
             }
 
+            $seenRecordIds[] = $record['id'] ?? null;
             $outcome = $this->upsertRecord($record, $defaultOpdId, $defaultPicId);
             $stats[$outcome]++;
         }
 
+        // Detect deletions: subdomain assets linked to this zone whose external_id
+        // is no longer present in Cloudflare. Mark them inactive (don't delete).
+        $stats['deactivated'] = $this->deactivateMissing($zoneName, array_filter($seenRecordIds));
+
         return $stats;
+    }
+
+    /**
+     * Mark any active subdomain asset under this zone as inactive when its
+     * external_id is no longer returned by Cloudflare. Preserves history.
+     */
+    protected function deactivateMissing(?string $zoneName, array $seenRecordIds): int
+    {
+        if (! $zoneName) {
+            return 0;
+        }
+
+        $query = Asset::where('package_ref', 'cloudflare')
+            ->where('type', 'subdomain')
+            ->where('status', 'active')
+            ->whereNotNull('external_id')
+            ->where('identifier', 'like', '%.' . $zoneName);
+
+        if (! empty($seenRecordIds)) {
+            $query->whereNotIn('external_id', $seenRecordIds);
+        }
+
+        return $query->update(['status' => 'inactive']);
     }
 
     /**
@@ -146,6 +184,7 @@ class DnsRegistrySync
             'external_id' => $recordId,
             'status' => 'active',
             'registered_at' => now(),
+            'discovered_at' => now(),
         ]);
 
         return 'created';

@@ -30,7 +30,10 @@ class ZoneRegistrySync
             'linked' => 0,
             'updated' => 0,
             'unchanged' => 0,
+            'deactivated' => 0,
         ];
+
+        $seenZoneIds = [];
 
         foreach ($zones as $zone) {
             $zoneId = $zone['id'] ?? null;
@@ -39,6 +42,7 @@ class ZoneRegistrySync
                 continue;
             }
 
+            $seenZoneIds[] = $zoneId;
             $mappedStatus = ($zone['status'] ?? null) === 'active' ? 'active' : 'pending';
 
             $asset = Asset::where('package_ref', 'cloudflare')
@@ -86,8 +90,19 @@ class ZoneRegistrySync
                 'external_id' => $zoneId,
                 'status' => $mappedStatus,
                 'registered_at' => now(),
+                'discovered_at' => now(),
             ]);
             $stats['created']++;
+        }
+
+        // Deactivate domain assets whose zones no longer exist in Cloudflare.
+        if (! empty($seenZoneIds)) {
+            $stats['deactivated'] = Asset::where('package_ref', 'cloudflare')
+                ->where('type', 'domain')
+                ->where('status', 'active')
+                ->whereNotNull('external_id')
+                ->whereNotIn('external_id', $seenZoneIds)
+                ->update(['status' => 'inactive']);
         }
 
         return $stats;

@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 use Illuminate\Support\ServiceProvider;
 use Nawasara\Cloudflare\Console\Commands\HealthCheckCommand;
+use Nawasara\Cloudflare\Console\Commands\SyncRegistryCommand;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 
 class CloudflareServiceProvider extends ServiceProvider
@@ -22,14 +23,23 @@ class CloudflareServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 HealthCheckCommand::class,
+                SyncRegistryCommand::class,
             ]);
 
             $this->app->booted(function () {
                 $schedule = $this->app->make(Schedule::class);
+
+                // Detect new/changed/deleted CF records and surface them in the registry.
+                $schedule->command('cloudflare:sync-registry')
+                    ->everyThirtyMinutes()
+                    ->withoutOverlapping(25)
+                    ->runInBackground();
+
                 $schedule->command('cloudflare:health-check --stale=10')
                     ->everyFifteenMinutes()
                     ->withoutOverlapping(20)
                     ->runInBackground();
+
                 $schedule->command('cloudflare:health-check --ssl --stale=1380')
                     ->dailyAt('02:00')
                     ->withoutOverlapping(60)
