@@ -28,6 +28,10 @@ class PermissionSeeder extends Seeder
             'cloudflare.ddos.manage',
             'cloudflare.health.view',
             'cloudflare.audit.view',
+            'cloudflare.pagerule.view',
+            'cloudflare.pagerule.create',
+            'cloudflare.pagerule.edit',
+            'cloudflare.pagerule.delete',
         ];
 
         foreach ($permissions as $permission) {

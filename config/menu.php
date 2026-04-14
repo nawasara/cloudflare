@@ -31,6 +31,13 @@ return [
                 'navigate' => true,
             ],
             [
+                'label' => 'Page Rules',
+                'icon' => 'lucide-file-cog',
+                'url' => url($prefix.'/page-rules'),
+                'permission' => 'cloudflare.pagerule.view',
+                'navigate' => true,
+            ],
+            [
                 'label' => 'Analytics',
                 'icon' => 'lucide-bar-chart-3',
                 'url' => url($prefix.'/analytics'),

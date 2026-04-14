@@ -539,6 +539,43 @@ class CloudflareClient
         ];
     }
 
+    // ─── Page Rules ─────────────────────────────────────
+
+    public function getPageRules(string $zoneId): array
+    {
+        $response = $this->api()->get("/zones/{$zoneId}/pagerules", [
+            'order' => 'priority',
+            'direction' => 'desc',
+            'match' => 'all',
+        ]);
+
+        return $response->successful() ? $response->json('result', []) : [];
+    }
+
+    public function createPageRule(string $zoneId, array $data): ?array
+    {
+        $response = $this->api()->post("/zones/{$zoneId}/pagerules", $data);
+
+        return $response->successful() ? $response->json('result') : null;
+    }
+
+    public function updatePageRule(string $zoneId, string $ruleId, array $data): bool
+    {
+        return $this->api()->put("/zones/{$zoneId}/pagerules/{$ruleId}", $data)->successful();
+    }
+
+    public function togglePageRule(string $zoneId, string $ruleId, string $status): bool
+    {
+        return $this->api()->patch("/zones/{$zoneId}/pagerules/{$ruleId}", [
+            'status' => $status,
+        ])->successful();
+    }
+
+    public function deletePageRule(string $zoneId, string $ruleId): bool
+    {
+        return $this->api()->delete("/zones/{$zoneId}/pagerules/{$ruleId}")->successful();
+    }
+
     // ─── Audit Logs ─────────────────────────────────────
 
     /**
