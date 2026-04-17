@@ -84,7 +84,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <x-nawasara-ui::dropdown-menu-action :id="$zone['id']" :items="[
-                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail(\'' . $zone['id'] . '\')', 'icon' => 'lucide-eye', 'permission' => 'cloudflare.zone.view'],
+                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail(\'' . $zone['id'] . '\')', 'modal' => 'zone-detail', 'icon' => 'lucide-eye', 'permission' => 'cloudflare.zone.view'],
                             ['type' => 'click', 'label' => 'Purge Cache', 'wire:click' => 'openPurge(\'' . $zone['id'] . '\', \'' . $zone['name'] . '\')', 'icon' => 'lucide-trash-2', 'permission' => 'cloudflare.cache.purge'],
                             ['type' => 'link', 'label' => 'DNS Records', 'href' => url('nawasara-cloudflare/dns?zone=' . $zone['id']), 'icon' => 'lucide-list', 'navigate' => true, 'permission' => 'cloudflare.dns.view'],
                         ]" />
@@ -101,7 +101,7 @@
     </x-nawasara-ui::table>
 
     {{-- Detail Modal --}}
-    <x-nawasara-ui::modal wire:model="showDetail" maxWidth="2xl" :title="$detailZone['name'] ?? 'Zone Detail'">
+    <x-nawasara-ui::modal id="zone-detail" maxWidth="2xl" :title="$detailZone['name'] ?? 'Zone Detail'">
         @if ($detailZone)
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4 text-sm">
@@ -200,7 +200,7 @@
     </x-nawasara-ui::modal>
 
     {{-- Purge Cache Modal --}}
-    <x-nawasara-ui::modal wire:model="showPurge" maxWidth="md" :title="'Purge Cache: ' . $purgeZoneName">
+    <x-nawasara-ui::modal id="zone-purge" maxWidth="md" :title="'Purge Cache: ' . $purgeZoneName">
         <div class="space-y-4">
             <div class="flex gap-3">
                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300">
@@ -229,7 +229,7 @@
         </div>
 
         <x-slot:footer>
-            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showPurge', false)">Batal</x-nawasara-ui::button>
+            <x-nawasara-ui::button color="neutral" variant="outline" @click="$dispatch('close-modal', 'zone-purge')">Batal</x-nawasara-ui::button>
             <x-nawasara-ui::button color="danger" wire:click="doPurge">Purge Cache</x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>

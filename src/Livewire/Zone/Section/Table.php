@@ -16,13 +16,11 @@ class Table extends Component
     public string $search = '';
 
     // Detail modal
-    public bool $showDetail = false;
     public ?array $detailZone = null;
     public ?string $detailSsl = null;
     public ?string $detailSecurityLevel = null;
 
     // Purge cache modal
-    public bool $showPurge = false;
     public string $purgeZoneId = '';
     public string $purgeZoneName = '';
     public string $purgeType = 'all';
@@ -54,12 +52,12 @@ class Table extends Component
         $this->detailZone = $this->cloudflare->getZone($zoneId);
         $this->detailSsl = $this->cloudflare->getSslSetting($zoneId);
         $this->detailSecurityLevel = $this->cloudflare->getSecurityLevel($zoneId);
-        $this->showDetail = true;
+        $this->dispatch('modal-open:zone-detail');
     }
 
     public function closeDetail()
     {
-        $this->showDetail = false;
+        $this->dispatch('modal-close:zone-detail');
         $this->detailZone = null;
         $this->detailSsl = null;
         $this->detailSecurityLevel = null;
@@ -104,7 +102,7 @@ class Table extends Component
         $this->purgeZoneName = $zoneName;
         $this->purgeType = 'all';
         $this->purgeUrls = '';
-        $this->showPurge = true;
+        $this->dispatch('modal-open:zone-purge');
     }
 
     public function doPurge()
@@ -126,7 +124,7 @@ class Table extends Component
 
         if ($success) {
             toaster_success("Cache {$this->purgeZoneName} berhasil di-purge");
-            $this->showPurge = false;
+            $this->dispatch('modal-close:zone-purge');
         } else {
             toaster_error('Gagal purge cache');
         }

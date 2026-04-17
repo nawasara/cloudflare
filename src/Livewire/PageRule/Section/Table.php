@@ -47,7 +47,6 @@ class Table extends Component
     public string $zone = '';
 
     // Form modal
-    public bool $showForm = false;
     public ?string $editingId = null;
     public string $formTarget = '';
     public string $formActionType = 'always_use_https';
@@ -106,7 +105,7 @@ class Table extends Component
         Gate::authorize('cloudflare.pagerule.create');
 
         $this->resetForm();
-        $this->showForm = true;
+        $this->dispatch('modal-open:pagerule-form');
     }
 
     public function openEdit(string $ruleId)
@@ -136,7 +135,7 @@ class Table extends Component
             $this->formActionValue = '';
         }
 
-        $this->showForm = true;
+        $this->dispatch('modal-open:pagerule-form');
     }
 
     public function save()
@@ -176,7 +175,7 @@ class Table extends Component
 
         if ($ok) {
             toaster_success($msg);
-            $this->showForm = false;
+            $this->dispatch('modal-close:pagerule-form');
             unset($this->rules);
         } else {
             toaster_error($msg);

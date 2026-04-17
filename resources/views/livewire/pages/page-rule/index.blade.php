@@ -4,7 +4,8 @@
 
         <x-slot name="actions">
             <x-nawasara-ui::page.actions>
-                <x-nawasara-ui::button color="success" x-on:click="$dispatch('openCreatePageRule')"
+                <x-nawasara-ui::button color="success" wire:click="$dispatch('openCreatePageRule')"
+                    @click="$dispatch('open-modal', 'pagerule-form')"
                     permission="cloudflare.pagerule.create">
                     <x-slot:icon><x-lucide-plus /></x-slot:icon>
                     Tambah Rule

@@ -15,7 +15,6 @@ class Table extends Component
     public string $zone = '';
 
     // Form modal
-    public bool $showForm = false;
     public ?string $editingId = null;
     public string $formDescription = '';
     public string $formExpression = '';
@@ -76,7 +75,7 @@ class Table extends Component
         $this->formExpression = '';
         $this->formAction = 'block';
         $this->formPaused = false;
-        $this->showForm = true;
+        $this->dispatch('modal-open:firewall-form');
     }
 
     public function openEdit(string $ruleId)
@@ -94,7 +93,7 @@ class Table extends Component
         $this->formExpression = $rule['filter']['expression'] ?? '';
         $this->formAction = $rule['action'] ?? 'block';
         $this->formPaused = $rule['paused'] ?? false;
-        $this->showForm = true;
+        $this->dispatch('modal-open:firewall-form');
     }
 
     public function save()
@@ -127,7 +126,7 @@ class Table extends Component
 
         if ($result) {
             toaster_success($message);
-            $this->showForm = false;
+            $this->dispatch('modal-close:firewall-form');
             unset($this->rules);
         } else {
             toaster_error($message);

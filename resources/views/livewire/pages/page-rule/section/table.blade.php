@@ -57,7 +57,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <x-nawasara-ui::dropdown-menu-action :id="$rule['id']" :items="[
-                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $rule['id'] . '\')', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.pagerule.edit'],
+                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $rule['id'] . '\')', 'modal' => 'pagerule-form', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.pagerule.edit'],
                                 ['type' => 'click', 'label' => $isActive ? 'Disable' : 'Enable', 'wire:click' => 'toggleStatus(\'' . $rule['id'] . '\')', 'icon' => $isActive ? 'lucide-pause' : 'lucide-play', 'permission' => 'cloudflare.pagerule.edit'],
                                 ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRule(\'' . $rule['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus rule ini?', 'permission' => 'cloudflare.pagerule.delete'],
                             ]" />
@@ -75,7 +75,7 @@
     @endif
 
     {{-- Create/Edit Modal --}}
-    <x-nawasara-ui::modal wire:model="showForm" maxWidth="lg" :title="$editingId ? 'Edit Page Rule' : 'Tambah Page Rule'">
+    <x-nawasara-ui::modal id="pagerule-form" maxWidth="lg" :title="$editingId ? 'Edit Page Rule' : 'Tambah Page Rule'">
         <form wire:submit="save" id="cf-page-rule-form" class="space-y-4">
             <x-nawasara-ui::form.input label="Target URL Pattern"
                 wire:model="formTarget" name="formTarget"
@@ -140,7 +140,7 @@
         </form>
 
         <x-slot:footer>
-            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showForm', false)">Batal</x-nawasara-ui::button>
+            <x-nawasara-ui::button color="neutral" variant="outline" @click="$dispatch('close-modal', 'pagerule-form')">Batal</x-nawasara-ui::button>
             <x-nawasara-ui::button type="submit" form="cf-page-rule-form" color="primary">{{ $editingId ? 'Update' : 'Simpan' }}</x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>

@@ -100,7 +100,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
                             <x-nawasara-ui::dropdown-menu-action :id="$record['id']" :items="[
-                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $record['id'] . '\')', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.dns.edit'],
+                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $record['id'] . '\')', 'modal' => 'dns-form', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.dns.edit'],
                                 ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRecord(\'' . $record['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus record ini?', 'permission' => 'cloudflare.dns.delete'],
                             ]" />
                         </td>
@@ -145,7 +145,7 @@
     @endif
 
     {{-- Create/Edit Modal --}}
-    <x-nawasara-ui::modal wire:model="showForm" maxWidth="lg" :title="$editingId ? 'Edit DNS Record' : 'Tambah DNS Record'">
+    <x-nawasara-ui::modal id="dns-form" maxWidth="lg" :title="$editingId ? 'Edit DNS Record' : 'Tambah DNS Record'">
         <form wire:submit="save" id="cf-dns-form" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <x-nawasara-ui::form.select label="Type" wire:model.live="formType" name="formType"
@@ -222,7 +222,7 @@
         </form>
 
         <x-slot:footer>
-            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="$set('showForm', false)">Batal</x-nawasara-ui::button>
+            <x-nawasara-ui::button color="neutral" variant="outline" @click="$dispatch('close-modal', 'dns-form')">Batal</x-nawasara-ui::button>
             <x-nawasara-ui::button type="submit" form="cf-dns-form" color="primary">{{ $editingId ? 'Update' : 'Simpan' }}</x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>

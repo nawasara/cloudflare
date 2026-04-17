@@ -23,7 +23,6 @@ class Table extends Component
     public int $page = 1;
 
     // Form modal
-    public bool $showForm = false;
     public ?string $editingId = null;
     public string $formType = 'A';
     public string $formName = '';
@@ -130,7 +129,7 @@ class Table extends Component
             $this->formOpdId = $zoneAsset?->opd_id ?: '';
             $this->formPicId = $zoneAsset?->pic_id ?: '';
         }
-        $this->showForm = true;
+        $this->dispatch('modal-open:dns-form');
     }
 
     public function openEdit(string $recordId)
@@ -159,7 +158,7 @@ class Table extends Component
         $this->formOpdId = $asset?->opd_id ?: '';
         $this->formPicId = $asset?->pic_id ?: '';
 
-        $this->showForm = true;
+        $this->dispatch('modal-open:dns-form');
     }
 
     public function updatedFormOpdId()
@@ -241,7 +240,7 @@ class Table extends Component
             }
 
             toaster_success($message);
-            $this->showForm = false;
+            $this->dispatch('modal-close:dns-form');
             unset($this->records, $this->assetMap);
         } else {
             toaster_error($message);

@@ -5,6 +5,7 @@
         <x-slot name="actions">
             <x-nawasara-ui::page.actions>
                 <x-nawasara-ui::button wire:click="$dispatch('openCreateFirewall')" color="success"
+                    @click="$dispatch('open-modal', 'firewall-form')"
                     permission="cloudflare.waf.create">
                     <x-slot:icon><x-lucide-plus class="size-4" /></x-slot:icon>
                     Tambah Rule
