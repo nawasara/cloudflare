@@ -36,6 +36,35 @@ class CloudflareClient
             && Vault::has('cloudflare', 'account_id');
     }
 
+    /**
+     * Test connection to Cloudflare. Called from Vault UI.
+     */
+    public function testConnection(?string $instance = null): array
+    {
+        if (! $this->isConfigured()) {
+            return ['success' => false, 'message' => 'Credential belum lengkap'];
+        }
+
+        try {
+            // /user/tokens/verify verifies the API token is valid.
+            $response = $this->api()->get('/user/tokens/verify');
+
+            if ($response->successful() && $response->json('success')) {
+                $status = $response->json('result.status', 'active');
+                return [
+                    'success' => true,
+                    'message' => "Token valid (status: {$status})",
+                ];
+            }
+
+            $errors = $response->json('errors', []);
+            $msg = $errors[0]['message'] ?? 'HTTP '.$response->status();
+            return ['success' => false, 'message' => 'Gagal: '.$msg];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => 'Error: '.$e->getMessage()];
+        }
+    }
+
     // ─── Zones ──────────────────────────────────────────
 
     public function getZones(array $params = []): array
