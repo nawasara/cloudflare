@@ -181,11 +181,18 @@
                                 $color = $isActive ? ($level === 'under_attack' ? 'danger' : 'primary') : 'neutral';
                                 $variant = $isActive ? 'solid' : 'outline';
                             @endphp
-                            <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
-                                wire:click="setSecurityLevel('{{ $level }}')"
-                                @if ($level === 'under_attack') wire:confirm="Aktifkan Under Attack Mode?" @endif>
-                                {{ $label }}
-                            </x-nawasara-ui::button>
+                            @if ($level === 'under_attack')
+                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
+                                    wire:click="setSecurityLevel('{{ $level }}')"
+                                    wire:confirm="Aktifkan Under Attack Mode?">
+                                    {{ $label }}
+                                </x-nawasara-ui::button>
+                            @else
+                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
+                                    wire:click="setSecurityLevel('{{ $level }}')">
+                                    {{ $label }}
+                                </x-nawasara-ui::button>
+                            @endif
                         @endforeach
                     </x-nawasara-ui::button-group>
                 </div>
