@@ -40,6 +40,10 @@ class Table extends Component
     public $formOpdId = '';
     public $formPicId = '';
 
+    // Bulk selection
+    public array $selected = [];
+    public bool $selectAll = false;
+
     public function mount(): void
     {
         if (! $this->zone) {
@@ -82,9 +86,20 @@ class Table extends Component
         return $when ? $when->diffForHumans() : null;
     }
 
-    public function updatedZone(): void { $this->resetPage(); }
-    public function updatedSearch(): void { $this->resetPage(); }
-    public function updatedTypeFilter(): void { $this->resetPage(); }
+    public function updatedZone(): void { $this->resetPage(); $this->resetSelection(); }
+    public function updatedSearch(): void { $this->resetPage(); $this->resetSelection(); }
+    public function updatedTypeFilter(): void { $this->resetPage(); $this->resetSelection(); }
+
+    public function updatedSelectAll(bool $value): void
+    {
+        $this->selected = $value ? $this->records->pluck('id')->map(fn ($id) => (string) $id)->all() : [];
+    }
+
+    public function resetSelection(): void
+    {
+        $this->selected = [];
+        $this->selectAll = false;
+    }
 
     public function refreshRecords(): void
     {
@@ -252,6 +267,31 @@ class Table extends Component
         if (! $parts) $parts[] = 'semua up-to-date';
 
         $this->toastSuccess('Sync DNS: '.implode(', ', $parts)." (dari {$stats['total']} record)");
+    }
+
+    // ─── Bulk Operations ────────────────────────────────
+
+    public function bulkDelete(): void
+    {
+        Gate::authorize('cloudflare.dns.delete');
+
+        if (empty($this->selected)) {
+            $this->toastError('Tidak ada record yang dipilih.');
+            return;
+        }
+
+        $count = 0;
+        foreach ($this->selected as $id) {
+            try {
+                $this->repo()->delete((int) $id);
+                $count++;
+            } catch (\Throwable $e) {
+                // Skip failures; per-record sync_error reflects status
+            }
+        }
+
+        $this->toastSuccess("Delete dispatched untuk {$count} record.");
+        $this->resetSelection();
     }
 
     public function render()

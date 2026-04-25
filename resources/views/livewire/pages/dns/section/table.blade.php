@@ -55,13 +55,29 @@
     </x-nawasara-ui::filter-bar>
 
     @if ($zone)
+        @can('cloudflare.dns.delete')
+            <x-nawasara-ui::bulk-action-bar :count="count($selected)" clearAction="resetSelection" label="record dipilih">
+                <x-nawasara-ui::button color="danger" variant="outline" size="sm" wire:click="bulkDelete" wire:confirm="HAPUS {{ count($selected) }} DNS record?">
+                    <x-slot:icon><x-lucide-trash-2 /></x-slot:icon>
+                    Delete
+                </x-nawasara-ui::button>
+            </x-nawasara-ui::bulk-action-bar>
+        @endcan
+
+        @php
+            $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">';
+        @endphp
         <x-nawasara-ui::table
-            :headers="['Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Sync', '']"
+            :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Sync', '']"
             :title="'DNS Records ('.$this->records->total().' records)'">
             <x-slot:table>
                 @forelse ($this->records as $record)
                     @php $asset = $this->assetMap[$record->record_id] ?? null; @endphp
-                    <tr>
+                    <tr wire:key="dns-{{ $record->id }}" class="{{ in_array((string) $record->id, $selected) ? 'bg-blue-50/50 dark:bg-blue-900/10' : '' }}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <input type="checkbox" wire:model.live="selected" value="{{ $record->id }}"
+                                class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php
                                 $typeBadge = match($record->type) {
@@ -133,7 +149,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                        <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
                             @if ($this->lastSyncedAt === null)
                                 Belum ada record. Klik <strong>Sync Sekarang</strong>.
                             @else
