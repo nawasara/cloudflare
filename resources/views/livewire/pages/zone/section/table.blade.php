@@ -1,11 +1,25 @@
 <div>
+    {{-- Sync info bar --}}
+    <div class="mb-3 flex items-center justify-between text-xs text-gray-500 dark:text-neutral-400">
+        <div class="flex items-center gap-3">
+            @if ($this->lastSyncedAt)
+                <span><x-lucide-clock class="size-3 inline" /> Last sync: {{ $this->lastSyncedAt }}</span>
+            @else
+                <span class="text-yellow-600">Belum pernah di-sync. Klik "Sync Sekarang" untuk fetch dari Cloudflare.</span>
+            @endif
+        </div>
+        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-blue-600 hover:underline">
+            Lihat Sync Jobs →
+        </a>
+    </div>
+
     <x-nawasara-ui::filter-bar searchPlaceholder="Cari domain..." searchModel="search">
         <x-slot:actions>
             <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshZones">
                 <x-slot:icon>
                     <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshZones" />
                 </x-slot:icon>
-                Refresh
+                Sync Sekarang
             </x-nawasara-ui::button>
 
             <x-nawasara-ui::button color="primary" variant="flat" size="sm"
@@ -26,13 +40,15 @@
         </x-slot:chips>
     </x-nawasara-ui::filter-bar>
 
-    <x-nawasara-ui::table :headers="['Domain', 'OPD / PIC', 'Status', 'Plan', 'SSL', 'Name Servers', '']" title="Zones ({{ count($this->zones) }} domain)">
+    <x-nawasara-ui::table
+        :headers="['Domain', 'OPD / PIC', 'Status', 'Plan', 'DNS Records', 'Sync', '']"
+        :title="'Zones ('.$this->zones->total().' domain)'">
         <x-slot:table>
             @forelse ($this->zones as $zone)
-                @php $asset = $this->assetMap[$zone['id']] ?? null; @endphp
+                @php $asset = $this->assetMap[$zone->zone_id] ?? null; @endphp
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-neutral-200">
-                        {{ $zone['name'] ?? '-' }}
+                        {{ $zone->name }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @if ($asset && $asset->opd)
@@ -48,67 +64,70 @@
                             </span>
                         @else
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
-                                Belum di-sync
+                                Belum di-link
                             </span>
                         @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @php
-                            $statusClass = match($zone['status'] ?? '') {
+                            $statusClass = match($zone->status) {
                                 'active' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
                                 'pending' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-                                'moved' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                                'moved', 'deleted' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
                                 default => 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-neutral-300',
                             };
                         @endphp
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
-                            {{ ucfirst($zone['status'] ?? 'unknown') }}
+                            {{ ucfirst($zone->status ?? 'unknown') }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-400">
-                        {{ ucfirst($zone['plan']['name'] ?? '-') }}
+                        {{ $zone->plan_name ?? '-' }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-400">
-                        {{ strtoupper($zone['ssl']['status'] ?? '-') }}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-neutral-300 font-mono">
+                        {{ $zone->dns_records_count }}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-neutral-400 max-w-xs">
-                        @if (!empty($zone['name_servers']))
-                            <div class="space-y-0.5">
-                                @foreach ($zone['name_servers'] as $ns)
-                                    <div class="text-xs font-mono">{{ $ns }}</div>
-                                @endforeach
-                            </div>
-                        @else
-                            -
-                        @endif
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <x-nawasara-sync::sync-badge :status="$zone->sync_status" :error="$zone->sync_error" />
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <x-nawasara-ui::dropdown-menu-action :id="$zone['id']" :items="[
-                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail(\'' . $zone['id'] . '\')', 'modal' => 'zone-detail', 'icon' => 'lucide-eye', 'permission' => 'cloudflare.zone.view'],
-                            ['type' => 'click', 'label' => 'Purge Cache', 'wire:click' => 'openPurge(\'' . $zone['id'] . '\', \'' . $zone['name'] . '\')', 'icon' => 'lucide-trash-2', 'permission' => 'cloudflare.cache.purge'],
-                            ['type' => 'link', 'label' => 'DNS Records', 'href' => url('nawasara-cloudflare/dns?zone=' . $zone['id']), 'icon' => 'lucide-list', 'navigate' => true, 'permission' => 'cloudflare.dns.view'],
+                        <x-nawasara-ui::dropdown-menu-action :id="$zone->id" :items="[
+                            ['type' => 'click', 'label' => 'Detail', 'wire:click' => 'openDetail('.$zone->id.')', 'modal' => 'zone-detail', 'icon' => 'lucide-eye', 'permission' => 'cloudflare.zone.view'],
+                            ['type' => 'click', 'label' => 'Purge Cache', 'wire:click' => 'openPurge(\'' . $zone->zone_id . '\', \'' . $zone->name . '\')', 'icon' => 'lucide-trash-2', 'permission' => 'cloudflare.cache.purge'],
+                            ['type' => 'link', 'label' => 'DNS Records', 'href' => url('nawasara-cloudflare/dns?zone=' . $zone->zone_id), 'icon' => 'lucide-list', 'navigate' => true, 'permission' => 'cloudflare.dns.view'],
                         ]" />
                     </td>
                 </tr>
             @empty
                 <tr>
                     <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
-                        Tidak ada zone ditemukan.
+                        @if ($this->lastSyncedAt === null)
+                            Database masih kosong. Klik <strong>Sync Sekarang</strong>.
+                        @else
+                            Tidak ada zone ditemukan.
+                        @endif
                     </td>
                 </tr>
             @endforelse
         </x-slot:table>
+
+        <x-slot:footer>
+            {{ $this->zones->links() }}
+        </x-slot:footer>
     </x-nawasara-ui::table>
 
     {{-- Detail Modal --}}
-    <x-nawasara-ui::modal id="zone-detail" maxWidth="2xl" :title="$detailZone['name'] ?? 'Zone Detail'">
-        @if ($detailZone)
+    <x-nawasara-ui::modal id="zone-detail" maxWidth="2xl" :title="$this->detail?->name ?? 'Zone Detail'">
+        @if ($this->detail)
+            @php $z = $this->detail; @endphp
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div><span class="text-gray-500 dark:text-neutral-400">Domain:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $detailZone['name'] }}</span></div>
-                    <div><span class="text-gray-500 dark:text-neutral-400">Status:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ ucfirst($detailZone['status'] ?? '-') }}</span></div>
-                    <div><span class="text-gray-500 dark:text-neutral-400">Plan:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $detailZone['plan']['name'] ?? '-' }}</span></div>
-                    <div><span class="text-gray-500 dark:text-neutral-400">Type:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ ucfirst($detailZone['type'] ?? '-') }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">Domain:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $z->name }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">Status:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ ucfirst($z->status ?? '-') }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">Plan:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $z->plan_name ?? '-' }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">Type:</span> <span class="font-medium text-gray-800 dark:text-neutral-200">{{ ucfirst($z->type ?? '-') }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">DNS Records:</span> <span class="font-medium font-mono text-gray-800 dark:text-neutral-200">{{ $z->dns_records_count }}</span></div>
+                    <div><span class="text-gray-500 dark:text-neutral-400">Created:</span> <span class="text-gray-800 dark:text-neutral-200">{{ $z->cf_created_at?->format('d M Y') ?? '-' }}</span></div>
                 </div>
 
                 {{-- SSL Mode --}}
@@ -130,7 +149,6 @@
                 <div>
                     <h4 class="font-semibold text-gray-700 dark:text-neutral-300 mb-2">Security Level</h4>
 
-                    {{-- Under Attack Mode Toggle --}}
                     <div class="flex items-center justify-between p-3 rounded-lg mb-3
                         {{ $detailSecurityLevel === 'under_attack'
                             ? 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
@@ -148,7 +166,7 @@
                         </div>
                         <button
                             wire:click="setSecurityLevel('{{ $detailSecurityLevel === 'under_attack' ? 'medium' : 'under_attack' }}')"
-                            wire:confirm="{{ $detailSecurityLevel === 'under_attack' ? 'Nonaktifkan Under Attack Mode?' : 'Aktifkan Under Attack Mode? Semua visitor akan melewati JS challenge selama 5 detik.' }}"
+                            wire:confirm="{{ $detailSecurityLevel === 'under_attack' ? 'Nonaktifkan Under Attack Mode?' : 'Aktifkan Under Attack Mode?' }}"
                             class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out
                                 {{ $detailSecurityLevel === 'under_attack' ? 'bg-red-600' : 'bg-gray-200 dark:bg-neutral-600' }}">
                             <span class="pointer-events-none inline-block size-5 rounded-full bg-white shadow transform transition duration-200 ease-in-out
@@ -156,7 +174,6 @@
                         </button>
                     </div>
 
-                    {{-- Security Level Buttons --}}
                     <x-nawasara-ui::button-group>
                         @foreach (['off' => 'Off', 'essentially_off' => 'Essentially Off', 'low' => 'Low', 'medium' => 'Medium', 'high' => 'High', 'under_attack' => 'Under Attack'] as $level => $label)
                             @php
@@ -164,28 +181,21 @@
                                 $color = $isActive ? ($level === 'under_attack' ? 'danger' : 'primary') : 'neutral';
                                 $variant = $isActive ? 'solid' : 'outline';
                             @endphp
-                            @if ($level === 'under_attack')
-                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
-                                    wire:click="setSecurityLevel('{{ $level }}')"
-                                    wire:confirm="Aktifkan Under Attack Mode?">
-                                    {{ $label }}
-                                </x-nawasara-ui::button>
-                            @else
-                                <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
-                                    wire:click="setSecurityLevel('{{ $level }}')">
-                                    {{ $label }}
-                                </x-nawasara-ui::button>
-                            @endif
+                            <x-nawasara-ui::button size="sm" :color="$color" :variant="$variant"
+                                wire:click="setSecurityLevel('{{ $level }}')"
+                                @if ($level === 'under_attack') wire:confirm="Aktifkan Under Attack Mode?" @endif>
+                                {{ $label }}
+                            </x-nawasara-ui::button>
                         @endforeach
                     </x-nawasara-ui::button-group>
                 </div>
 
                 {{-- Name Servers --}}
-                @if (!empty($detailZone['name_servers']))
+                @if (! empty($z->name_servers))
                     <div>
                         <h4 class="font-semibold text-gray-700 dark:text-neutral-300 mb-2">Name Servers</h4>
                         <div class="space-y-1">
-                            @foreach ($detailZone['name_servers'] as $ns)
+                            @foreach ($z->name_servers as $ns)
                                 <div class="text-sm font-mono text-gray-600 dark:text-neutral-400 bg-gray-50 dark:bg-neutral-700/50 px-3 py-1.5 rounded">{{ $ns }}</div>
                             @endforeach
                         </div>
@@ -200,7 +210,7 @@
     </x-nawasara-ui::modal>
 
     {{-- Purge Cache Modal --}}
-    <x-nawasara-ui::modal id="zone-purge" maxWidth="md" :title="'Purge Cache: ' . $purgeZoneName">
+    <x-nawasara-ui::modal id="zone-purge" maxWidth="md" :title="'Purge Cache: '.$purgeZoneName">
         <div class="space-y-4">
             <div class="flex gap-3">
                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300">

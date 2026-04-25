@@ -1,8 +1,23 @@
 <div>
-    @php $currentZoneName = collect($this->zones)->firstWhere('id', $zone)['name'] ?? null; @endphp
+    @php $currentZoneName = $this->zoneOptions[$zone] ?? null; @endphp
+
+    {{-- Sync info bar --}}
+    <div class="mb-3 flex items-center justify-between text-xs text-gray-500 dark:text-neutral-400">
+        <div class="flex items-center gap-3">
+            @if ($this->lastSyncedAt)
+                <span><x-lucide-clock class="size-3 inline" /> Last sync: {{ $this->lastSyncedAt }}</span>
+            @else
+                <span class="text-yellow-600">Belum pernah di-sync. Klik "Sync Sekarang".</span>
+            @endif
+        </div>
+        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-blue-600 hover:underline">
+            Lihat Sync Jobs →
+        </a>
+    </div>
+
     <x-nawasara-ui::filter-bar searchPlaceholder="Cari nama record..." searchModel="search">
         <x-nawasara-ui::filter-dropdown
-            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
             model="zone" :items="$this->zoneOptions" />
 
         <x-nawasara-ui::filter-dropdown label="Type" model="typeFilter"
@@ -10,6 +25,13 @@
 
         <x-slot:actions>
             @if ($zone)
+                <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshRecords">
+                    <x-slot:icon>
+                        <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshRecords" />
+                    </x-slot:icon>
+                    Sync Sekarang
+                </x-nawasara-ui::button>
+
                 <x-nawasara-ui::button color="primary" variant="flat" size="sm"
                     wire:click="syncRegistry"
                     wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
@@ -33,15 +55,16 @@
     </x-nawasara-ui::filter-bar>
 
     @if ($zone)
-        <x-nawasara-ui::table :headers="['Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', '']"
-            :title="'DNS Records (' . count($this->records['result'] ?? []) . ' records)'">
+        <x-nawasara-ui::table
+            :headers="['Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Sync', '']"
+            :title="'DNS Records ('.$this->records->total().' records)'">
             <x-slot:table>
-                @forelse ($this->records['result'] ?? [] as $record)
-                    @php $asset = $this->assetMap[$record['id']] ?? null; @endphp
+                @forelse ($this->records as $record)
+                    @php $asset = $this->assetMap[$record->record_id] ?? null; @endphp
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php
-                                $typeBadge = match($record['type']) {
+                                $typeBadge = match($record->type) {
                                     'A' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
                                     'AAAA' => 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
                                     'CNAME' => 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
@@ -53,17 +76,17 @@
                                 };
                             @endphp
                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold {{ $typeBadge }}">
-                                {{ $record['type'] }}
+                                {{ $record->type }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-gray-800 dark:text-neutral-200 max-w-xs truncate">
-                            {{ $record['name'] }}
+                            {{ $record->name }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-neutral-400 max-w-xs truncate font-mono">
-                            {{ $record['content'] }}
+                            {{ $record->content }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            @if (! in_array($record['type'], ['A', 'AAAA', 'CNAME']))
+                            @if (! in_array($record->type, ['A', 'AAAA', 'CNAME']))
                                 <span class="text-gray-300 dark:text-neutral-600">-</span>
                             @elseif ($asset && $asset->opd)
                                 <div class="flex flex-col">
@@ -78,16 +101,16 @@
                                 </span>
                             @else
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
-                                    Belum di-sync
+                                    Belum di-link
                                 </span>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            @if ($record['proxied'] ?? false)
-                                <span class="inline-flex items-center gap-1 text-orange-500" title="Proxied (orange cloud)">
+                            @if ($record->proxied)
+                                <span class="inline-flex items-center gap-1 text-orange-500" title="Proxied">
                                     <x-lucide-cloud class="size-4 fill-orange-500" /> On
                                 </span>
-                            @elseif (in_array($record['type'], ['A', 'AAAA', 'CNAME']))
+                            @elseif (in_array($record->type, ['A', 'AAAA', 'CNAME']))
                                 <span class="inline-flex items-center gap-1 text-gray-400" title="DNS only">
                                     <x-lucide-cloud-off class="size-4" /> Off
                                 </span>
@@ -96,45 +119,33 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-400">
-                            {{ ($record['ttl'] ?? 1) === 1 ? 'Auto' : $record['ttl'].'s' }}
+                            {{ $record->ttl === 1 ? 'Auto' : $record->ttl.'s' }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <x-nawasara-sync::sync-badge :status="$record->sync_status" :error="$record->sync_error" />
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
-                            <x-nawasara-ui::dropdown-menu-action :id="$record['id']" :items="[
-                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit(\'' . $record['id'] . '\')', 'modal' => 'dns-form', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.dns.edit'],
-                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRecord(\'' . $record['id'] . '\')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus record ini?', 'permission' => 'cloudflare.dns.delete'],
+                            <x-nawasara-ui::dropdown-menu-action :id="$record->id" :items="[
+                                ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit('.$record->id.')', 'modal' => 'dns-form', 'icon' => 'lucide-pencil', 'permission' => 'cloudflare.dns.edit'],
+                                ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'deleteRecord('.$record->id.')', 'icon' => 'lucide-trash-2', 'confirm' => 'Yakin ingin menghapus record ini?', 'permission' => 'cloudflare.dns.delete'],
                             ]" />
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
-                            Tidak ada DNS record ditemukan.
+                        <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                            @if ($this->lastSyncedAt === null)
+                                Belum ada record. Klik <strong>Sync Sekarang</strong>.
+                            @else
+                                Tidak ada DNS record ditemukan untuk filter ini.
+                            @endif
                         </td>
                     </tr>
                 @endforelse
             </x-slot:table>
 
             <x-slot:footer>
-                @php
-                    $info = $this->records['result_info'] ?? [];
-                    $totalPages = $info['total_pages'] ?? 1;
-                    $totalCount = $info['total_count'] ?? 0;
-                @endphp
-                <div class="flex items-center justify-between px-4 py-3">
-                    <div class="text-sm text-gray-500 dark:text-neutral-400">
-                        Halaman {{ $page }} dari {{ $totalPages }} ({{ $totalCount }} records)
-                    </div>
-                    <div class="flex gap-2">
-                        <button wire:click="previousPage" @disabled($page <= 1)
-                            class="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-700">
-                            Prev
-                        </button>
-                        <button wire:click="nextPage" @disabled($page >= $totalPages)
-                            class="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-700">
-                            Next
-                        </button>
-                    </div>
-                </div>
+                {{ $this->records->links() }}
             </x-slot:footer>
         </x-nawasara-ui::table>
     @else
@@ -190,7 +201,6 @@
                     <span class="text-sm text-gray-700 dark:text-neutral-300">Proxied (orange cloud)</span>
                 </div>
 
-                {{-- OPD / PIC Linking --}}
                 <div class="pt-4 border-t border-gray-200 dark:border-neutral-700">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-neutral-300 mb-3">
                         Kepemilikan (Registry)

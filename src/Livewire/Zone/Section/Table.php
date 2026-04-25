@@ -3,20 +3,29 @@
 namespace Nawasara\Cloudflare\Livewire\Zone\Section;
 
 use Illuminate\Support\Facades\Gate;
-use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
+use Livewire\Component;
+use Livewire\WithPagination;
+use Nawasara\Cloudflare\Models\CloudflareZone;
+use Nawasara\Cloudflare\Repositories\CloudflareZoneRepository;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Cloudflare\Services\ZoneRegistrySync;
 use Nawasara\Registry\Models\Asset;
+use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
 class Table extends Component
 {
+    use HasBrowserToast;
+    use WithPagination;
+
     #[Url(except: '')]
     public string $search = '';
 
+    public int $perPage = 25;
+
     // Detail modal
-    public ?array $detailZone = null;
+    public ?int $detailId = null;
     public ?string $detailSsl = null;
     public ?string $detailSecurityLevel = null;
 
@@ -33,70 +42,97 @@ class Table extends Component
         $this->cloudflare = $cloudflare;
     }
 
+    protected function repo(): CloudflareZoneRepository
+    {
+        return new CloudflareZoneRepository();
+    }
+
+    public function updatedSearch(): void { $this->resetPage(); }
+
     #[Computed]
     public function zones()
     {
-        $zones = $this->cloudflare->getCachedZones();
-
-        if ($this->search) {
-            $search = strtolower($this->search);
-            $zones = array_filter($zones, fn ($zone) => str_contains(strtolower($zone['name'] ?? ''), $search));
-            $zones = array_values($zones);
-        }
-
-        return $zones;
+        return $this->repo()->list([
+            'search' => $this->search ?: null,
+        ], $this->perPage);
     }
 
-    public function openDetail(string $zoneId)
+    #[Computed]
+    public function lastSyncedAt(): ?string
     {
-        $this->detailZone = $this->cloudflare->getZone($zoneId);
-        $this->detailSsl = $this->cloudflare->getSslSetting($zoneId);
-        $this->detailSecurityLevel = $this->cloudflare->getSecurityLevel($zoneId);
+        $when = $this->repo()->lastSyncedAt();
+        return $when ? $when->diffForHumans() : null;
+    }
+
+    #[Computed]
+    public function detail(): ?CloudflareZone
+    {
+        return $this->detailId ? CloudflareZone::find($this->detailId) : null;
+    }
+
+    public function refreshZones(): void
+    {
+        Gate::authorize('cloudflare.zone.view');
+
+        $this->repo()->syncNow();
+        $this->toastSuccess('Sync dispatched. Refresh dalam beberapa detik.');
+    }
+
+    public function openDetail(int $id): void
+    {
+        $this->detailId = $id;
+
+        // Fetch live SSL & security level (small calls, OK live)
+        $zone = CloudflareZone::find($id);
+        if ($zone) {
+            $this->detailSsl = $zone->ssl_mode ?: $this->cloudflare->getSslSetting($zone->zone_id);
+            $this->detailSecurityLevel = $zone->security_level ?: $this->cloudflare->getSecurityLevel($zone->zone_id);
+        }
         $this->dispatch('modal-open:zone-detail');
     }
 
-    public function closeDetail()
+    public function closeDetail(): void
     {
         $this->dispatch('modal-close:zone-detail');
-        $this->detailZone = null;
+        $this->detailId = null;
         $this->detailSsl = null;
         $this->detailSecurityLevel = null;
     }
 
-    public function setSslMode(string $mode)
+    public function setSslMode(string $mode): void
     {
         Gate::authorize('cloudflare.ssl.manage');
 
-        if (! $this->detailZone) {
-            return;
-        }
+        $zone = $this->detail;
+        if (! $zone) return;
 
-        if ($this->cloudflare->setSslMode($this->detailZone['id'], $mode)) {
+        if ($this->cloudflare->setSslMode($zone->zone_id, $mode)) {
+            $zone->update(['ssl_mode' => $mode]);
             $this->detailSsl = $mode;
-            toaster_success("SSL mode diubah ke {$mode}");
+            $this->toastSuccess("SSL mode diubah ke {$mode}");
         } else {
-            toaster_error('Gagal mengubah SSL mode');
+            $this->toastError('Gagal mengubah SSL mode');
         }
     }
 
-    public function setSecurityLevel(string $level)
+    public function setSecurityLevel(string $level): void
     {
         Gate::authorize('cloudflare.ddos.manage');
 
-        if (! $this->detailZone) {
-            return;
-        }
+        $zone = $this->detail;
+        if (! $zone) return;
 
-        if ($this->cloudflare->setSecurityLevel($this->detailZone['id'], $level)) {
+        if ($this->cloudflare->setSecurityLevel($zone->zone_id, $level)) {
+            $zone->update(['security_level' => $level]);
             $this->detailSecurityLevel = $level;
-            $label = $level === 'under_attack' ? 'Under Attack Mode AKTIF' : 'Security level diubah ke ' . $level;
-            toaster_success($label);
+            $label = $level === 'under_attack' ? 'Under Attack Mode AKTIF' : 'Security level diubah ke '.$level;
+            $this->toastSuccess($label);
         } else {
-            toaster_error('Gagal mengubah security level');
+            $this->toastError('Gagal mengubah security level');
         }
     }
 
-    public function openPurge(string $zoneId, string $zoneName)
+    public function openPurge(string $zoneId, string $zoneName): void
     {
         $this->purgeZoneId = $zoneId;
         $this->purgeZoneName = $zoneName;
@@ -105,7 +141,7 @@ class Table extends Component
         $this->dispatch('modal-open:zone-purge');
     }
 
-    public function doPurge()
+    public function doPurge(): void
     {
         Gate::authorize('cloudflare.cache.purge');
 
@@ -116,25 +152,18 @@ class Table extends Component
         } else {
             $urls = array_filter(array_map('trim', explode("\n", $this->purgeUrls)));
             if (empty($urls)) {
-                toaster_error('Masukkan minimal 1 URL');
+                $this->toastError('Masukkan minimal 1 URL');
                 return;
             }
             $success = $this->cloudflare->purgeUrls($this->purgeZoneId, $urls);
         }
 
         if ($success) {
-            toaster_success("Cache {$this->purgeZoneName} berhasil di-purge");
+            $this->toastSuccess("Cache {$this->purgeZoneName} berhasil di-purge");
             $this->dispatch('modal-close:zone-purge');
         } else {
-            toaster_error('Gagal purge cache');
+            $this->toastError('Gagal purge cache');
         }
-    }
-
-    public function refreshZones()
-    {
-        cache()->forget('cloudflare_zones');
-        unset($this->zones);
-        toaster_success('Zone list di-refresh');
     }
 
     #[Computed]
@@ -148,7 +177,7 @@ class Table extends Component
             ->keyBy('external_id');
     }
 
-    public function syncRegistry(ZoneRegistrySync $sync)
+    public function syncRegistry(ZoneRegistrySync $sync): void
     {
         Gate::authorize('cloudflare.zone.view');
 
@@ -161,7 +190,7 @@ class Table extends Component
         if ($stats['updated']) $parts[] = "{$stats['updated']} diperbarui";
         if (! $parts) $parts[] = 'semua up-to-date';
 
-        toaster_success('Sync registry: ' . implode(', ', $parts) . " (dari {$stats['total']} zone)");
+        $this->toastSuccess('Sync registry: '.implode(', ', $parts)." (dari {$stats['total']} zone)");
     }
 
     public function render()
