@@ -101,8 +101,8 @@
 
                 <div class="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 p-5">
                     <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                            <x-lucide-users class="size-5 text-purple-600 dark:text-purple-400" />
+                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
+                            <x-lucide-users class="size-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 dark:text-neutral-400">Unique Visitors</p>
