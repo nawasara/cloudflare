@@ -19,13 +19,21 @@ class UpdateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
             throw new \RuntimeException("Local record not found: {$recordId}");
         }
 
-        // Build update payload — keep type & name from existing if not provided
+        // Build update payload — keep type & name from existing if not provided.
+        // CF PUT replaces the record fully, so we MUST send comment & tags
+        // even when the user didn't change them, otherwise CF wipes them.
         $data = [
             'type' => $this->payload['type'] ?? $record->type,
             'name' => $this->payload['name'] ?? $record->name,
             'content' => $this->payload['content'] ?? $record->content,
             'ttl' => $this->payload['ttl'] ?? $record->ttl,
             'proxied' => $this->payload['proxied'] ?? $record->proxied,
+            'comment' => array_key_exists('comment', $this->payload)
+                ? ($this->payload['comment'] ?: null)
+                : $record->comment,
+            'tags' => array_key_exists('tags', $this->payload)
+                ? ($this->payload['tags'] ?: [])
+                : ($record->tags ?? []),
         ];
 
         if (isset($this->payload['priority']) || $record->priority !== null) {
@@ -45,6 +53,8 @@ class UpdateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
             'ttl' => $result['ttl'] ?? $record->ttl,
             'proxied' => $result['proxied'] ?? $record->proxied,
             'priority' => $result['priority'] ?? $record->priority,
+            'comment' => $result['comment'] ?? null,
+            'tags' => $result['tags'] ?? [],
             'cf_modified_at' => isset($result['modified_on']) ? \Carbon\Carbon::parse($result['modified_on']) : now(),
         ]);
         $record->content_hash = $record->computeContentHash();

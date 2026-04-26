@@ -40,6 +40,9 @@ class CreateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
         if (! empty($this->payload['comment'])) {
             $data['comment'] = $this->payload['comment'];
         }
+        if (! empty($this->payload['tags']) && is_array($this->payload['tags'])) {
+            $data['tags'] = array_values($this->payload['tags']);
+        }
 
         $result = $this->client()->createDnsRecord($zoneId, $data);
 
@@ -60,6 +63,7 @@ class CreateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
             'proxied' => (bool) ($result['proxied'] ?? false),
             'priority' => $result['priority'] ?? null,
             'comment' => $result['comment'] ?? null,
+            'tags' => $result['tags'] ?? [],
             'cf_created_at' => isset($result['created_on']) ? \Carbon\Carbon::parse($result['created_on']) : now(),
             'cf_modified_at' => isset($result['modified_on']) ? \Carbon\Carbon::parse($result['modified_on']) : now(),
         ];

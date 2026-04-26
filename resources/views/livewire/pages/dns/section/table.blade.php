@@ -216,7 +216,24 @@
                     </label>
                     <span class="text-sm text-gray-700 dark:text-neutral-300">Proxied (orange cloud)</span>
                 </div>
+            @endif
 
+            {{-- Comment + Tags (semua type) --}}
+            <div>
+                <x-nawasara-ui::form.label value="Comment (opsional)" />
+                <x-nawasara-ui::form.textarea wire:model="formComment" rows="2"
+                    placeholder="Catatan internal — siapa yang punya, kapan dibuat, kenapa, dll." />
+            </div>
+            <div>
+                <x-nawasara-ui::form.label value="Tags (opsional)" />
+                <x-nawasara-ui::form.input wire:model="formTagsInput"
+                    placeholder="contoh: kominfo, production, monitoring" />
+                <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
+                    Pisahkan dengan koma. Sama dengan field Tags di Cloudflare dashboard.
+                </p>
+            </div>
+
+            @if (in_array($formType, ['A', 'AAAA', 'CNAME']))
                 <div class="pt-4 border-t border-gray-200 dark:border-neutral-700">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-neutral-300 mb-3">
                         Kepemilikan (Registry)

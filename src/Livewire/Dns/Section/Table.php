@@ -37,6 +37,8 @@ class Table extends Component
     public int $formTtl = 1;
     public bool $formProxied = true;
     public int $formPriority = 10;
+    public string $formComment = '';
+    public string $formTagsInput = ''; // comma-separated user input
     public $formOpdId = '';
     public $formPicId = '';
 
@@ -139,6 +141,8 @@ class Table extends Component
         $this->formTtl = $record->ttl;
         $this->formProxied = $record->proxied;
         $this->formPriority = $record->priority ?? 10;
+        $this->formComment = (string) ($record->comment ?? '');
+        $this->formTagsInput = is_array($record->tags) ? implode(', ', $record->tags) : '';
 
         $asset = Asset::where('package_ref', 'cloudflare')
             ->where('external_id', $record->record_id)
@@ -181,8 +185,28 @@ class Table extends Component
         $this->formTtl = 1;
         $this->formProxied = true;
         $this->formPriority = 10;
+        $this->formComment = '';
+        $this->formTagsInput = '';
         $this->formOpdId = '';
         $this->formPicId = '';
+    }
+
+    /**
+     * Parse comma/newline-separated tags input into a clean array.
+     * Cloudflare allows letters, digits, and `_-+./@`; we strip whitespace,
+     * dedupe, and drop empties.
+     */
+    protected function parseTagsInput(string $raw): array
+    {
+        $parts = preg_split('/[,\n\r]+/', $raw) ?: [];
+        $tags = [];
+        foreach ($parts as $p) {
+            $t = trim($p);
+            if ($t !== '') {
+                $tags[] = $t;
+            }
+        }
+        return array_values(array_unique($tags));
     }
 
     public function save(): void
@@ -201,6 +225,8 @@ class Table extends Component
             'content' => $this->formContent,
             'ttl' => $this->formTtl,
             'proxied' => in_array($this->formType, ['A', 'AAAA', 'CNAME']) ? $this->formProxied : false,
+            'comment' => trim($this->formComment) ?: null,
+            'tags' => $this->parseTagsInput($this->formTagsInput),
         ];
 
         if ($this->formType === 'MX') {
