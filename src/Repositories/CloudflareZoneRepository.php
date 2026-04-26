@@ -8,11 +8,14 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Nawasara\Cloudflare\Jobs\SyncCloudflareZonesJob;
 use Nawasara\Cloudflare\Models\CloudflareZone;
+use Nawasara\Sync\Concerns\TracksLastSync;
 use Nawasara\Sync\Contracts\SyncedRepository;
 use Nawasara\Sync\Models\SyncJob;
 
 class CloudflareZoneRepository implements SyncedRepository
 {
+    use TracksLastSync;
+
     public function list(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
         return $this->query($filters)->orderBy('name')->paginate($perPage);
@@ -62,11 +65,7 @@ class CloudflareZoneRepository implements SyncedRepository
 
     public function lastSyncedAt(): ?Carbon
     {
-        $latest = CloudflareZone::whereNotNull('last_synced_at')
-            ->orderByDesc('last_synced_at')
-            ->value('last_synced_at');
-
-        return $latest ? Carbon::parse($latest) : null;
+        return $this->lastSuccessfulSyncAt('cloudflare', 'sync_zones');
     }
 
     protected function query(array $filters = [])

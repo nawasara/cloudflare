@@ -11,11 +11,14 @@ use Nawasara\Cloudflare\Jobs\DeleteCloudflareDnsRecordJob;
 use Nawasara\Cloudflare\Jobs\SyncCloudflareDnsRecordsJob;
 use Nawasara\Cloudflare\Jobs\UpdateCloudflareDnsRecordJob;
 use Nawasara\Cloudflare\Models\CloudflareDnsRecord;
+use Nawasara\Sync\Concerns\TracksLastSync;
 use Nawasara\Sync\Contracts\SyncedRepository;
 use Nawasara\Sync\Models\SyncJob;
 
 class CloudflareDnsRecordRepository implements SyncedRepository
 {
+    use TracksLastSync;
+
     public function __construct(public ?string $zoneId = null)
     {
     }
@@ -127,13 +130,7 @@ class CloudflareDnsRecordRepository implements SyncedRepository
 
     public function lastSyncedAt(): ?Carbon
     {
-        $q = CloudflareDnsRecord::whereNotNull('last_synced_at');
-        if ($this->zoneId) {
-            $q->where('zone_id', $this->zoneId);
-        }
-        $latest = $q->orderByDesc('last_synced_at')->value('last_synced_at');
-
-        return $latest ? Carbon::parse($latest) : null;
+        return $this->lastSuccessfulSyncAt('cloudflare', 'sync_dns_records');
     }
 
     protected function query(array $filters = [])
