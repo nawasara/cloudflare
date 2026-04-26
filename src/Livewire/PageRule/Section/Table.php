@@ -8,9 +8,12 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Nawasara\Cloudflare\Services\CloudflareClient;
+use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
 class Table extends Component
 {
+    use HasBrowserToast;
+
     /** Action type → human label. Single-action MVP. */
     public const ACTION_TYPES = [
         'always_use_https' => 'Always Use HTTPS',
@@ -150,7 +153,7 @@ class Table extends Component
 
         $action = $this->buildAction();
         if ($action === null) {
-            toaster_error('Action value tidak valid');
+            $this->toastError('Action value tidak valid');
             return;
         }
 
@@ -174,11 +177,11 @@ class Table extends Component
         }
 
         if ($ok) {
-            toaster_success($msg);
+            $this->toastSuccess($msg);
             $this->dispatch('modal-close:pagerule-form');
             unset($this->rules);
         } else {
-            toaster_error($msg);
+            $this->toastError($msg);
         }
     }
 
@@ -232,10 +235,10 @@ class Table extends Component
         $newStatus = ($rule['status'] ?? 'active') === 'active' ? 'disabled' : 'active';
 
         if ($this->cloudflare->togglePageRule($this->zone, $ruleId, $newStatus)) {
-            toaster_success("Rule diubah ke {$newStatus}");
+            $this->toastSuccess("Rule diubah ke {$newStatus}");
             unset($this->rules);
         } else {
-            toaster_error('Gagal mengubah status rule');
+            $this->toastError('Gagal mengubah status rule');
         }
     }
 
@@ -244,10 +247,10 @@ class Table extends Component
         Gate::authorize('cloudflare.pagerule.delete');
 
         if ($this->cloudflare->deletePageRule($this->zone, $ruleId)) {
-            toaster_success('Page rule berhasil dihapus');
+            $this->toastSuccess('Page rule berhasil dihapus');
             unset($this->rules);
         } else {
-            toaster_error('Gagal menghapus page rule');
+            $this->toastError('Gagal menghapus page rule');
         }
     }
 

@@ -11,9 +11,11 @@ use Nawasara\Cloudflare\Models\EndpointHealth;
 use Nawasara\Cloudflare\Services\DnsHealthChecker;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Registry\Models\Opd;
+use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
 class DnsHealth extends Component
 {
+    use HasBrowserToast;
     use WithPagination;
 
     #[Url(except: '')]
@@ -135,7 +137,7 @@ class DnsHealth extends Component
 
         app(DnsHealthChecker::class)->checkOne($asset->identifier, true);
         unset($this->rows, $this->summary);
-        toaster_success("Checked {$asset->identifier}");
+        $this->toastSuccess("Checked {$asset->identifier}");
     }
 
     public function checkPage()
@@ -144,7 +146,7 @@ class DnsHealth extends Component
 
         $ids = $this->items->pluck('identifier')->all();
         if (empty($ids)) {
-            toaster_error('Tidak ada record untuk dicek');
+            $this->toastError('Tidak ada record untuk dicek');
             return;
         }
 
@@ -153,7 +155,7 @@ class DnsHealth extends Component
         $elapsed = round(microtime(true) - $start, 1);
 
         unset($this->rows, $this->summary);
-        toaster_success(count($ids) . " record dicek dalam {$elapsed}s (HTTP only)");
+        $this->toastSuccess(count($ids) . " record dicek dalam {$elapsed}s (HTTP only)");
     }
 
     public function setStateFilter(string $state)

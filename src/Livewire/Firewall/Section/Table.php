@@ -8,9 +8,12 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Nawasara\Cloudflare\Services\CloudflareClient;
+use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
 class Table extends Component
 {
+    use HasBrowserToast;
+
     #[Url(except: '')]
     public string $zone = '';
 
@@ -125,11 +128,11 @@ class Table extends Component
         }
 
         if ($result) {
-            toaster_success($message);
+            $this->toastSuccess($message);
             $this->dispatch('modal-close:firewall-form');
             unset($this->rules);
         } else {
-            toaster_error($message);
+            $this->toastError($message);
         }
     }
 
@@ -138,10 +141,10 @@ class Table extends Component
         Gate::authorize('cloudflare.waf.delete');
 
         if ($this->cloudflare->deleteFirewallRule($this->zone, $ruleId)) {
-            toaster_success('Firewall rule berhasil dihapus');
+            $this->toastSuccess('Firewall rule berhasil dihapus');
             unset($this->rules);
         } else {
-            toaster_error('Gagal menghapus firewall rule');
+            $this->toastError('Gagal menghapus firewall rule');
         }
     }
 

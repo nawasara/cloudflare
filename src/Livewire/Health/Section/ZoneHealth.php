@@ -7,9 +7,12 @@ use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Registry\Models\Asset;
+use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
 class ZoneHealth extends Component
 {
+    use HasBrowserToast;
+
     public string $stateFilter = '';
 
     protected CloudflareClient $cloudflare;
@@ -86,7 +89,7 @@ class ZoneHealth extends Component
             $this->cloudflare->forgetZoneHealth($zone['id']);
         }
         unset($this->healthData, $this->summary, $this->filteredRows);
-        toaster_success('Zone health di-refresh');
+        $this->toastSuccess('Zone health di-refresh');
     }
 
     public function setFilter(string $state)
