@@ -30,7 +30,7 @@ class CloudflareDnsRecordRepository implements SyncedRepository
 
     public function list(array $filters = [], int $perPage = 25): LengthAwarePaginator
     {
-        return $this->query($filters)->orderBy('name')->paginate($perPage);
+        return $this->applySort($this->query($filters), $filters['sort'] ?? null)->paginate($perPage);
     }
 
     public function find(string|int $id): ?Model
@@ -43,7 +43,20 @@ class CloudflareDnsRecordRepository implements SyncedRepository
 
     public function all(array $filters = []): Collection
     {
-        return $this->query($filters)->orderBy('name')->get();
+        return $this->applySort($this->query($filters), $filters['sort'] ?? null)->get();
+    }
+
+    /**
+     * Apply ordering. Falls back to name asc when key not recognised.
+     */
+    protected function applySort($query, ?string $sort)
+    {
+        return match ($sort) {
+            'newest' => $query->orderByDesc('cf_created_at')->orderByDesc('id'),
+            'oldest' => $query->orderBy('cf_created_at')->orderBy('id'),
+            'modified' => $query->orderByDesc('cf_modified_at')->orderByDesc('id'),
+            default => $query->orderBy('name'),
+        };
     }
 
     public function create(array $data): ?SyncJob

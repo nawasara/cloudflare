@@ -23,6 +23,9 @@
         <x-nawasara-ui::filter-dropdown label="Type" model="typeFilter"
             :items="['all' => 'Semua Type', 'A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV']" />
 
+        <x-nawasara-ui::filter-dropdown label="Urutkan" model="sort"
+            :items="['name' => 'Nama (A-Z)', 'newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi']" />
+
         <x-slot:actions>
             @if ($zone)
                 <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshRecords">
@@ -68,7 +71,7 @@
             $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">';
         @endphp
         <x-nawasara-ui::table
-            :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Sync', '']"
+            :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Created', 'Sync', '']"
             :title="'DNS Records ('.$this->records->total().' records)'">
             <x-slot:table>
                 @forelse ($this->records as $record)
@@ -138,6 +141,23 @@
                             {{ $record->ttl === 1 ? 'Auto' : $record->ttl.'s' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            @if ($record->cf_created_at)
+                                @php $isNew = $record->cf_created_at->gt(now()->subDay()); @endphp
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-gray-700 dark:text-neutral-300" title="Source: Cloudflare. Dibuat {{ $record->cf_created_at->format('d M Y H:i') }}">
+                                        {{ $record->cf_created_at->diffForHumans(['short' => true]) }}
+                                    </span>
+                                    @if ($isNew)
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 uppercase">
+                                            New
+                                        </span>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <x-nawasara-sync::sync-badge :status="$record->sync_status" :error="$record->sync_error" />
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -149,7 +169,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                        <td colspan="10" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
                             @if ($this->lastSyncedAt === null)
                                 Belum ada record. Klik <strong>Sync Sekarang</strong>.
                             @else

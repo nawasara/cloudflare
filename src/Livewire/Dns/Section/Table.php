@@ -27,6 +27,7 @@ class Table extends Component
 
     public string $search = '';
     public string $typeFilter = '';
+    public string $sort = 'name'; // name | newest | oldest | modified
     public int $perPage = 25;
 
     // Form modal
@@ -78,6 +79,7 @@ class Table extends Component
         return $this->repo()->list([
             'search' => $this->search ?: null,
             'type' => $this->typeFilter ?: null,
+            'sort' => $this->sort ?: null,
         ], $this->perPage);
     }
 
@@ -91,6 +93,7 @@ class Table extends Component
     public function updatedZone(): void { $this->resetPage(); $this->resetSelection(); }
     public function updatedSearch(): void { $this->resetPage(); $this->resetSelection(); }
     public function updatedTypeFilter(): void { $this->resetPage(); $this->resetSelection(); }
+    public function updatedSort(): void { $this->resetPage(); $this->resetSelection(); }
 
     public function updatedSelectAll(bool $value): void
     {
