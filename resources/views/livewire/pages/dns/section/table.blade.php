@@ -24,7 +24,7 @@
             :items="['all' => 'Semua Type', 'A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV']" />
 
         <x-nawasara-ui::filter-dropdown label="Urutkan" model="sort"
-            :items="['name' => 'Nama (A-Z)', 'newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi']" />
+            :items="['newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi', 'name' => 'Nama (A-Z)']" />
 
         <x-slot:actions>
             @if ($zone)

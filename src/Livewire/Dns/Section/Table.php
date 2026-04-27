@@ -27,7 +27,7 @@ class Table extends Component
 
     public string $search = '';
     public string $typeFilter = '';
-    public string $sort = 'name'; // name | newest | oldest | modified
+    public string $sort = 'newest'; // newest | oldest | modified | name
     public int $perPage = 25;
 
     // Form modal
