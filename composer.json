@@ -1,8 +1,30 @@
 {
     "name": "nawasara/cloudflare",
-    "description": "Cloudflare management dashboard for Nawasara — DNS, firewall, SSL, analytics",
+    "description": "Cloudflare management dashboard for Nawasara — DNS records, zones, firewall rules, page rules, SSL settings, and analytics, with DB-cached snapshots and queue-backed mutations.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "nawasara",
+        "laravel",
+        "cloudflare",
+        "dns",
+        "cdn",
+        "firewall",
+        "waf",
+        "ssl",
+        "analytics"
+    ],
+    "authors": [
+        {
+            "name": "Pringgo J. Saputro",
+            "email": "odyinggo@gmail.com",
+            "role": "Lead Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/nawasara/cloudflare/issues",
+        "source": "https://github.com/nawasara/cloudflare"
+    },
     "autoload": {
         "psr-4": {
             "Nawasara\\Cloudflare\\": "src/"
@@ -13,6 +35,7 @@
         "illuminate/support": "^10.0|^12.0",
         "spatie/laravel-permission": "^6.0",
         "nawasara/ui": "*",
+        "nawasara/sync": "*",
         "nawasara/vault": "*",
         "nawasara/registry": "*",
         "livewire/livewire": "^3.0"
@@ -23,5 +46,7 @@
                 "Nawasara\\Cloudflare\\CloudflareServiceProvider"
             ]
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

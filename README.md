@@ -1,151 +1,137 @@
-# nawasara/cloudflare
+# Nawasara Cloudflare
 
-Cloudflare management dashboard untuk Nawasara.
+Cloudflare management dashboard for the Nawasara superapp framework — DNS records, zones, firewall rules, page rules, SSL settings, cache, and analytics, all read from a local DB snapshot for speed and mutated through queue jobs for auditability.
 
-## Fitur
+## Features
 
-- **Zone Management** — List domain, detail, SSL mode, security level
-- **DNS Records** — CRUD DNS records per zone (A, AAAA, CNAME, MX, TXT, NS, SRV)
-- **Firewall Rules** — CRUD WAF custom rules per zone
-- **Analytics** — Overview traffic (requests, bandwidth, threats, visitors)
-- **Cache Purge** — Purge all cache atau per-URL
-- **Under Attack Mode** — Toggle security level termasuk Under Attack Mode
+- **Zone management** — list domains with SSL mode, security level, plan, name servers, and per-zone settings
+- **DNS records** — full CRUD across A, AAAA, CNAME, MX, TXT, NS, and SRV types, with comment + tags preserved on update
+- **Firewall rules** — CRUD WAF custom rules per zone
+- **Page rules** — CRUD URL-pattern rules
+- **Analytics** — request volume, bandwidth, threats blocked, and unique visitors with per-OPD rollup
+- **Cache purge** — purge entire cache or specific URLs
+- **Under Attack mode** — toggle the security level when a zone is under DDoS pressure
+- **Sync info bar** on every page showing the last successful sync time, pending mutation count, and a link to the audit log
 
----
+The package follows the DB-cache + queue pattern from `nawasara/sync`: reads come from local snapshot tables (paginated, fast); writes dispatch queue jobs that update Cloudflare and the snapshot via content-hash conflict detection.
 
-## Setup Cloudflare API Token
+## Installation
 
-### 1. Login ke Cloudflare Dashboard
+```bash
+composer require nawasara/cloudflare
+php artisan migrate
+php artisan db:seed --class="Nawasara\Cloudflare\Database\Seeders\PermissionSeeder" --force
+```
 
-Buka [dash.cloudflare.com](https://dash.cloudflare.com) dan login dengan akun yang mengelola domain.
+The package is auto-discovered by Laravel — no manual provider registration required.
 
-### 2. Buka halaman API Tokens
+## Cloudflare API Token Setup
 
-Klik **profile icon** (kanan atas) > **My Profile** > tab **API Tokens**.
+### 1. Sign in to the Cloudflare dashboard
 
-### 3. Buat Custom Token
+Go to [dash.cloudflare.com](https://dash.cloudflare.com) and sign in to the account that manages your domains.
 
-Klik **Create Token** > pilih **Create Custom Token** (paling bawah, "Get started").
+### 2. Open the API Tokens page
 
-### 4. Konfigurasi Permission
+Click your **profile icon** (top right) → **My Profile** → **API Tokens** tab.
 
-Isi nama token, misalnya: `Nawasara Dashboard`
+### 3. Create a custom token
 
-Tambahkan permissions berikut sesuai fitur yang digunakan:
+Click **Create Token** → choose **Create Custom Token** at the bottom of the templates list.
 
-| Permission | Access | Digunakan untuk |
+### 4. Configure permissions
+
+Name the token (e.g. `Nawasara Dashboard`) and add the following permissions depending on which features you plan to use:
+
+| Permission | Access | Used for |
 |---|---|---|
-| **Zone** > **Zone** | Read | List zones, detail zone |
-| **Zone** > **Zone Settings** | Edit | SSL mode, security level, Under Attack Mode |
-| **Zone** > **DNS** | Edit | CRUD DNS records |
-| **Zone** > **Firewall Services** | Edit | CRUD firewall rules |
-| **Zone** > **Analytics** | Read | Dashboard analytics |
-| **Zone** > **Cache Purge** | Purge | Purge cache all/per-URL |
+| Zone → Zone | Read | List zones, zone detail |
+| Zone → Zone Settings | Edit | SSL mode, security level, Under Attack mode |
+| Zone → DNS | Edit | CRUD DNS records |
+| Zone → Firewall Services | Edit | CRUD firewall rules |
+| Zone → Analytics | Read | Dashboard analytics |
+| Zone → Cache Purge | Purge | Cache purge (all / per URL) |
 
-> **Catatan:** Permission "Edit" sudah mencakup "Read", jadi tidak perlu menambahkan Read terpisah untuk DNS, Firewall, dan Zone Settings.
-
-**Screenshot referensi konfigurasi:**
-
-```
-Token name:     Nawasara Dashboard
-Permissions:
-  [Zone]  [Zone]              [Read]
-  [Zone]  [Zone Settings]     [Edit]
-  [Zone]  [DNS]               [Edit]
-  [Zone]  [Firewall Services] [Edit]
-  [Zone]  [Analytics]         [Read]
-  [Zone]  [Cache Purge]       [Purge]
-
-Zone Resources:
-  [Include]  [All zones]
-  (atau pilih specific zones jika ingin membatasi)
-```
+> *Edit* permission already implies *Read*, so there's no need to add Read separately for DNS, Firewall, or Zone Settings.
 
 ### 5. Zone Resources
 
-Pilih scope zone yang diizinkan:
+Choose the scope:
 
-- **All zones** — token bisa akses semua domain di akun
-- **Specific zone** — batasi ke domain tertentu saja (lebih aman jika hanya manage beberapa domain)
+- **All zones** — the token can access every domain in the account
+- **Specific zone** — restrict to one or a few domains (recommended if you only manage a subset)
 
-### 6. (Opsional) IP Address Filtering
+### 6. (Optional) IP Address Filtering
 
-Jika server Nawasara punya IP statis, tambahkan filter:
+If your Nawasara server has a static IP, add **Client IP Address Filtering** → **Is in** → enter the IP. This protects against the token being used from anywhere else if it leaks.
 
-- **Client IP Address Filtering** > **Is in** > masukkan IP server
+### 7. (Optional) Token lifetime
 
-Ini mencegah token digunakan dari IP lain jika bocor.
+Set **Start Date** and **End Date** for a temporary token. Leave blank for a permanent one.
 
-### 7. TTL (Opsional)
+### 8. Create the token
 
-Set **Start Date** dan **End Date** jika ingin token berlaku sementara. Kosongkan untuk token permanen.
+Click **Continue to summary**, review, then **Create Token**.
 
-### 8. Create Token
+**Copy the displayed token immediately** — Cloudflare only shows it once.
 
-Klik **Continue to summary** > review > **Create Token**.
+### 9. Note the Account ID
 
-**Salin token yang muncul** — token hanya ditampilkan sekali dan tidak bisa dilihat lagi.
+Find your Account ID:
 
-### 9. Catat Account ID
+- Open any zone's **Overview** page
+- The Account ID is in the right sidebar under **API**
 
-Account ID bisa dilihat di:
+Or read it from any dashboard URL: `dash.cloudflare.com/{ACCOUNT_ID}/...`
 
-1. Buka halaman **Overview** dari zone manapun
-2. Lihat sidebar kanan > bagian **API** > **Account ID**
+## Storing credentials in Vault
 
-Atau dari URL: `dash.cloudflare.com/{ACCOUNT_ID}/...`
+1. Open Nawasara → `/nawasara-vault`
+2. Choose the **Cloudflare** group
+3. Fill in:
+   - **API Token** — paste the token from step 8
+   - **Account ID** — from step 9
+4. Save
 
----
+The package picks up credentials from Vault automatically.
 
-## Simpan Credential ke Vault
+## Verification
 
-1. Buka Nawasara > **Vault** (`/nawasara-vault`)
-2. Pilih group **Cloudflare**
-3. Isi:
-   - **API Token**: paste token dari langkah 8
-   - **Account ID**: paste Account ID dari langkah 9
-4. Simpan
+Open **Cloudflare → Zones** in the sidebar. Your domain list should appear after the first sync.
 
-Setelah tersimpan, package `nawasara/cloudflare` akan otomatis membaca credential dari Vault.
+If it doesn't, check:
 
----
+- The token is pasted exactly (no leading or trailing whitespace)
+- Account ID matches the destination account
+- Token permissions include every feature you want to use
+- Zone Resources includes the domains you intend to manage
 
-## Verifikasi
+## Permissions
 
-Setelah setup, buka **Cloudflare > Zones** di sidebar Nawasara. Jika konfigurasi benar, daftar domain akan muncul.
-
-Jika gagal, periksa:
-- Token sudah benar (tidak ada spasi/karakter tambahan)
-- Account ID sesuai
-- Permission token mencakup semua yang dibutuhkan
-- Zone resources mencakup domain yang ingin dikelola
-
----
-
-## Permissions Nawasara
-
-Package ini mendaftarkan permissions berikut via `PermissionSeeder`:
-
-| Permission | Deskripsi |
+| Permission | Description |
 |---|---|
-| `cloudflare.zone.view` | Lihat daftar zone/domain |
-| `cloudflare.dns.view` | Lihat DNS records |
-| `cloudflare.dns.create` | Buat DNS record baru |
-| `cloudflare.dns.edit` | Edit DNS record |
-| `cloudflare.dns.delete` | Hapus DNS record |
-| `cloudflare.waf.view` | Lihat firewall rules |
-| `cloudflare.waf.create` | Buat firewall rule |
-| `cloudflare.waf.edit` | Edit firewall rule |
-| `cloudflare.waf.delete` | Hapus firewall rule |
-| `cloudflare.ssl.view` | Lihat status SSL |
-| `cloudflare.ssl.manage` | Ubah SSL mode |
-| `cloudflare.analytics.view` | Lihat analytics |
+| `cloudflare.zone.view` | View zone list |
+| `cloudflare.dns.view` | View DNS records |
+| `cloudflare.dns.create` | Create a DNS record |
+| `cloudflare.dns.edit` | Edit a DNS record |
+| `cloudflare.dns.delete` | Delete a DNS record |
+| `cloudflare.waf.view` | View firewall rules |
+| `cloudflare.waf.create` | Create a firewall rule |
+| `cloudflare.waf.edit` | Edit a firewall rule |
+| `cloudflare.waf.delete` | Delete a firewall rule |
+| `cloudflare.ssl.view` | View SSL status |
+| `cloudflare.ssl.manage` | Change SSL mode |
+| `cloudflare.analytics.view` | View analytics |
 | `cloudflare.cache.purge` | Purge cache |
-| `cloudflare.ddos.view` | Lihat security level |
-| `cloudflare.ddos.manage` | Ubah security level / Under Attack Mode |
+| `cloudflare.ddos.view` | View security level |
+| `cloudflare.ddos.manage` | Change security level / Under Attack mode |
 
-Jalankan seeder untuk mendaftarkan permissions:
+All permissions are auto-assigned to the `developer` role by the seeder.
 
-```bash
-php artisan db:seed --class="Nawasara\Cloudflare\Database\Seeders\PermissionSeeder"
-```
+## Author
+
+**Pringgo J. Saputro** &lt;odyinggo@gmail.com&gt;
+
+## License
+
+MIT
