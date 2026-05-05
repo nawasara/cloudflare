@@ -3,63 +3,43 @@
 
     {{-- Summary Cards --}}
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <button wire:click="setStateFilter('ok')" type="button"
-            class="text-left bg-white dark:bg-neutral-800 rounded-xl border p-4 transition-colors
-                {{ $stateFilter === 'ok' ? 'border-green-500 ring-2 ring-green-200 dark:ring-green-900/40' : 'border-gray-200 dark:border-neutral-700 hover:border-green-300' }}">
-            <div class="flex items-center gap-2">
-                <x-lucide-circle-check class="size-5 text-green-600 dark:text-green-400" />
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-neutral-400">Healthy</p>
-                    <p class="text-xl font-bold text-gray-800 dark:text-neutral-200">{{ $summary['ok'] }}</p>
-                </div>
-            </div>
-        </button>
+        <x-nawasara-ui::stat-card
+            label="Healthy"
+            :value="$summary['ok']"
+            icon="lucide-circle-check"
+            color="success"
+            :active="$stateFilter === 'ok'"
+            wire:click="setStateFilter('ok')" />
 
-        <button wire:click="setStateFilter('warning')" type="button"
-            class="text-left bg-white dark:bg-neutral-800 rounded-xl border p-4 transition-colors
-                {{ $stateFilter === 'warning' ? 'border-yellow-500 ring-2 ring-yellow-200 dark:ring-yellow-900/40' : 'border-gray-200 dark:border-neutral-700 hover:border-yellow-300' }}">
-            <div class="flex items-center gap-2">
-                <x-lucide-triangle-alert class="size-5 text-yellow-600 dark:text-yellow-400" />
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-neutral-400">Warning</p>
-                    <p class="text-xl font-bold text-gray-800 dark:text-neutral-200">{{ $summary['warning'] }}</p>
-                </div>
-            </div>
-        </button>
+        <x-nawasara-ui::stat-card
+            label="Warning"
+            :value="$summary['warning']"
+            icon="lucide-triangle-alert"
+            color="warning"
+            :active="$stateFilter === 'warning'"
+            wire:click="setStateFilter('warning')" />
 
-        <button wire:click="setStateFilter('critical')" type="button"
-            class="text-left bg-white dark:bg-neutral-800 rounded-xl border p-4 transition-colors
-                {{ $stateFilter === 'critical' ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-900/40' : 'border-gray-200 dark:border-neutral-700 hover:border-red-300' }}">
-            <div class="flex items-center gap-2">
-                <x-lucide-octagon-alert class="size-5 text-red-600 dark:text-red-400" />
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-neutral-400">Critical</p>
-                    <p class="text-xl font-bold text-gray-800 dark:text-neutral-200">{{ $summary['critical'] }}</p>
-                </div>
-            </div>
-        </button>
+        <x-nawasara-ui::stat-card
+            label="Critical"
+            :value="$summary['critical']"
+            icon="lucide-octagon-alert"
+            color="danger"
+            :active="$stateFilter === 'critical'"
+            wire:click="setStateFilter('critical')" />
 
-        <button wire:click="setStateFilter('unchecked')" type="button"
-            class="text-left bg-white dark:bg-neutral-800 rounded-xl border p-4 transition-colors
-                {{ $stateFilter === 'unchecked' ? 'border-gray-500 ring-2 ring-gray-200 dark:ring-gray-900/40' : 'border-gray-200 dark:border-neutral-700 hover:border-gray-300' }}">
-            <div class="flex items-center gap-2">
-                <x-lucide-circle-dashed class="size-5 text-gray-600 dark:text-neutral-400" />
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-neutral-400">Unchecked</p>
-                    <p class="text-xl font-bold text-gray-800 dark:text-neutral-200">{{ $summary['unchecked'] }}</p>
-                </div>
-            </div>
-        </button>
+        <x-nawasara-ui::stat-card
+            label="Unchecked"
+            :value="$summary['unchecked']"
+            icon="lucide-circle-dashed"
+            color="neutral"
+            :active="$stateFilter === 'unchecked'"
+            wire:click="setStateFilter('unchecked')" />
 
-        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-4">
-            <div class="flex items-center gap-2">
-                <x-lucide-list class="size-5 text-blue-600 dark:text-blue-400" />
-                <div>
-                    <p class="text-xs text-blue-700 dark:text-blue-300">Total Subdomain</p>
-                    <p class="text-xl font-bold text-blue-800 dark:text-blue-200">{{ $summary['total'] }}</p>
-                </div>
-            </div>
-        </div>
+        <x-nawasara-ui::stat-card
+            label="Total Subdomain"
+            :value="$summary['total']"
+            icon="lucide-list"
+            color="primary" />
     </div>
 
     {{-- Filter Bar --}}
@@ -97,12 +77,12 @@
         :title="'DNS Endpoints (' . count($this->rows) . ' di halaman ini)'">
         <x-slot:table>
             @php
-                $stateClass = fn ($s) => match ($s) {
-                    'ok' => 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-                    'warning' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-                    'critical' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-                    'unchecked' => 'bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400',
-                    default => 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-neutral-300',
+                $stateColor = fn ($s) => match ($s) {
+                    'ok' => 'success',
+                    'warning' => 'warning',
+                    'critical' => 'danger',
+                    'unchecked' => 'neutral',
+                    default => 'neutral',
                 };
             @endphp
             @forelse ($this->rows as $row)
@@ -128,25 +108,24 @@
                         @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $stateClass($state) }}">
+                        <x-nawasara-ui::badge :color="$stateColor($state)">
                             {{ ucfirst($state) }}
-                        </span>
+                        </x-nawasara-ui::badge>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @if ($h && $h->error)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                title="{{ $h->error }}">ERR</span>
+                            <x-nawasara-ui::badge color="danger" class="font-mono" title="{{ $h->error }}">ERR</x-nawasara-ui::badge>
                         @elseif ($h && $h->status_code)
                             @php
                                 $code = $h->status_code;
-                                $codeClass = match(true) {
-                                    $code >= 500 => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                                    $code >= 400 && !in_array($code, [401, 403]) => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                    $code >= 300 => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                                    default => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                $codeColor = match (true) {
+                                    $code >= 500 => 'danger',
+                                    $code >= 400 && ! in_array($code, [401, 403]) => 'warning',
+                                    $code >= 300 => 'primary',
+                                    default => 'success',
                                 };
                             @endphp
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono {{ $codeClass }}">{{ $code }}</span>
+                            <x-nawasara-ui::badge :color="$codeColor" class="font-mono">{{ $code }}</x-nawasara-ui::badge>
                         @else
                             <span class="text-gray-300 dark:text-neutral-600 text-xs">-</span>
                         @endif
