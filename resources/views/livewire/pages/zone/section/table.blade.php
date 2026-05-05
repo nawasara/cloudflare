@@ -164,14 +164,11 @@
                                 </p>
                             </div>
                         </div>
-                        <button
+                        <x-nawasara-ui::toggle
+                            :active="$detailSecurityLevel === 'under_attack'"
+                            color="danger"
                             wire:click="setSecurityLevel('{{ $detailSecurityLevel === 'under_attack' ? 'medium' : 'under_attack' }}')"
-                            wire:confirm="{{ $detailSecurityLevel === 'under_attack' ? 'Nonaktifkan Under Attack Mode?' : 'Aktifkan Under Attack Mode?' }}"
-                            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out
-                                {{ $detailSecurityLevel === 'under_attack' ? 'bg-red-600' : 'bg-gray-200 dark:bg-neutral-600' }}">
-                            <span class="pointer-events-none inline-block size-5 rounded-full bg-white shadow transform transition duration-200 ease-in-out
-                                {{ $detailSecurityLevel === 'under_attack' ? 'translate-x-5' : 'translate-x-0' }}"></span>
-                        </button>
+                            wire:confirm="{{ $detailSecurityLevel === 'under_attack' ? 'Nonaktifkan Under Attack Mode?' : 'Aktifkan Under Attack Mode?' }}" />
                     </div>
 
                     <x-nawasara-ui::button-group>
