@@ -100,11 +100,26 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                    <td colspan="7">
                         @if ($this->lastSyncedAt === null)
-                            Database masih kosong. Klik <strong>Sync Sekarang</strong>.
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-globe"
+                                title="Database zone masih kosong"
+                                description="Klik tombol Sync Sekarang untuk fetch zone dari Cloudflare."
+                                inline />
+                        @elseif ($search !== '')
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-search-x"
+                                title="Tidak ada zone yang cocok"
+                                description="Coba ubah search keyword atau hapus filter."
+                                variant="filter"
+                                inline />
                         @else
-                            Tidak ada zone ditemukan.
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-globe"
+                                title="Belum ada zone terdaftar"
+                                description="Tambah domain di Cloudflare console, lalu sync ulang."
+                                inline />
                         @endif
                     </td>
                 </tr>

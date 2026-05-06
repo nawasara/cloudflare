@@ -50,8 +50,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
-                            Tidak ada firewall rule.
+                        <td colspan="5">
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-shield"
+                                title="Belum ada firewall rule"
+                                description="Buat rule via Cloudflare console untuk block traffic mencurigakan, lalu sync ulang."
+                                inline />
                         </td>
                     </tr>
                 @endforelse

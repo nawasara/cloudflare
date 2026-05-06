@@ -65,8 +65,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-neutral-400">
-                            Belum ada page rule untuk zone ini.
+                        <td colspan="5">
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-file-cog"
+                                title="Belum ada page rule"
+                                description="Page rule legacy bisa di-set via Cloudflare console. Untuk new feature, pakai Rules engine."
+                                inline />
                         </td>
                     </tr>
                 @endforelse

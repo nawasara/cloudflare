@@ -169,11 +169,20 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
+                        <td colspan="10">
                             @if ($this->lastSyncedAt === null)
-                                Belum ada record. Klik <strong>Sync Sekarang</strong>.
+                                <x-nawasara-ui::empty-state
+                                    icon="lucide-list"
+                                    title="Belum ada DNS record"
+                                    description="Klik tombol Sync Sekarang untuk fetch record dari Cloudflare."
+                                    inline />
                             @else
-                                Tidak ada DNS record ditemukan untuk filter ini.
+                                <x-nawasara-ui::empty-state
+                                    icon="lucide-search-x"
+                                    title="Tidak ada record yang cocok"
+                                    description="Coba ubah filter atau hapus search keyword."
+                                    variant="filter"
+                                    inline />
                             @endif
                         </td>
                     </tr>

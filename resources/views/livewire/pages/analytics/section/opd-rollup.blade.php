@@ -133,7 +133,7 @@
                                     <td class="px-5 py-3 text-right">
                                         <div class="flex items-center gap-2 justify-end">
                                             <div class="w-20 bg-gray-100 dark:bg-neutral-700 rounded-full h-2">
-                                                <div class="bg-blue-500 h-2 rounded-full" style="width: {{ min($pct, 100) }}%"></div>
+                                                <div class="bg-emerald-600 h-2 rounded-full" style="width: {{ min($pct, 100) }}%"></div>
                                             </div>
                                             <span class="text-xs text-gray-500 dark:text-neutral-400 w-10 text-right">{{ $pct }}%</span>
                                         </div>
@@ -155,7 +155,7 @@
                             <div class="flex items-center gap-3 text-sm">
                                 <span class="w-8 font-mono text-gray-600 dark:text-neutral-400">{{ $country }}</span>
                                 <div class="flex-1 bg-gray-100 dark:bg-neutral-700 rounded-full h-2">
-                                    <div class="bg-blue-500 h-2 rounded-full" style="width: {{ min($pct, 100) }}%"></div>
+                                    <div class="bg-emerald-600 h-2 rounded-full" style="width: {{ min($pct, 100) }}%"></div>
                                 </div>
                                 <span class="w-24 text-right text-gray-500 dark:text-neutral-400">{{ number_format($count) }} ({{ $pct }}%)</span>
                             </div>

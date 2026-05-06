@@ -10,6 +10,9 @@
 
     @php $summary = $this->summary; @endphp
 
+    {{-- Filter cards — clickable untuk filter table.
+         accent border-left kasih hierarchy konsisten dgn hero stats di
+         pages lain. Active state (ring) tetap signal "filter aktif". --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <x-nawasara-ui::stat-card
             label="Healthy"
@@ -17,6 +20,7 @@
             icon="lucide-circle-check"
             color="success"
             :active="$stateFilter === 'ok'"
+            accent
             wire:click="setFilter('ok')" />
 
         <x-nawasara-ui::stat-card
@@ -25,6 +29,7 @@
             icon="lucide-triangle-alert"
             color="warning"
             :active="$stateFilter === 'warning'"
+            accent
             wire:click="setFilter('warning')" />
 
         <x-nawasara-ui::stat-card
@@ -33,6 +38,7 @@
             icon="lucide-octagon-alert"
             color="danger"
             :active="$stateFilter === 'critical'"
+            accent
             wire:click="setFilter('critical')" />
 
         <x-nawasara-ui::stat-card
@@ -41,6 +47,7 @@
             icon="lucide-circle-help"
             color="neutral"
             :active="$stateFilter === 'unknown'"
+            accent
             wire:click="setFilter('unknown')" />
     </div>
 
@@ -107,8 +114,13 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
-                        Tidak ada zone yang cocok dengan filter.
+                    <td colspan="7">
+                        <x-nawasara-ui::empty-state
+                            icon="lucide-search-x"
+                            title="Tidak ada zone yang cocok"
+                            description="Coba klik salah satu kategori (Healthy/Warning/Critical) di atas atau Refresh."
+                            variant="filter"
+                            inline />
                     </td>
                 </tr>
             @endforelse

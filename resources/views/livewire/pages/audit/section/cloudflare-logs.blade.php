@@ -116,11 +116,20 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-neutral-400">
+                    <td colspan="6">
                         @if (! empty($logs['error']))
-                            Tidak bisa menarik audit log dari Cloudflare.
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-circle-x"
+                                title="Tidak bisa menarik audit log"
+                                description="Pastikan API token punya permission Audit Logs: Read di Cloudflare console."
+                                inline />
                         @else
-                            Tidak ada audit log dalam rentang waktu ini.
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-scroll-text"
+                                title="Tidak ada audit log"
+                                description="Tidak ada perubahan tercatat di rentang waktu ini. Coba pilih periode lebih panjang."
+                                variant="filter"
+                                inline />
                         @endif
                     </td>
                 </tr>

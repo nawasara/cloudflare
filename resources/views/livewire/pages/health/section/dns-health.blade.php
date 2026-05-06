@@ -1,7 +1,8 @@
 <div>
     @php $summary = $this->summary; @endphp
 
-    {{-- Summary Cards --}}
+    {{-- Summary Cards — clickable untuk filter state.
+         accent border-left = brand consistency, active ring = filter active. --}}
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <x-nawasara-ui::stat-card
             label="Healthy"
@@ -9,6 +10,7 @@
             icon="lucide-circle-check"
             color="success"
             :active="$stateFilter === 'ok'"
+            accent
             wire:click="setStateFilter('ok')" />
 
         <x-nawasara-ui::stat-card
@@ -17,6 +19,7 @@
             icon="lucide-triangle-alert"
             color="warning"
             :active="$stateFilter === 'warning'"
+            accent
             wire:click="setStateFilter('warning')" />
 
         <x-nawasara-ui::stat-card
@@ -25,6 +28,7 @@
             icon="lucide-octagon-alert"
             color="danger"
             :active="$stateFilter === 'critical'"
+            accent
             wire:click="setStateFilter('critical')" />
 
         <x-nawasara-ui::stat-card
@@ -33,13 +37,15 @@
             icon="lucide-circle-dashed"
             color="neutral"
             :active="$stateFilter === 'unchecked'"
+            accent
             wire:click="setStateFilter('unchecked')" />
 
         <x-nawasara-ui::stat-card
             label="Total Subdomain"
             :value="$summary['total']"
             icon="lucide-list"
-            color="primary" />
+            color="primary"
+            accent />
     </div>
 
     {{-- Filter Bar --}}
