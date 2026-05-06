@@ -7,10 +7,10 @@
             @if ($this->lastSyncedAt)
                 <span><x-lucide-clock class="size-3 inline" /> Last sync: {{ $this->lastSyncedAt }}</span>
             @else
-                <span class="text-yellow-600">Belum pernah di-sync. Klik "Sync Sekarang".</span>
+                <span class="text-amber-700 dark:text-amber-400">Belum pernah di-sync. Klik "Sync Sekarang".</span>
             @endif
         </div>
-        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-blue-600 hover:underline">
+        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-emerald-700 dark:text-emerald-400 hover:underline font-medium">
             Lihat Sync Jobs →
         </a>
     </div>
@@ -68,7 +68,7 @@
         @endcan
 
         @php
-            $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">';
+            $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">';
         @endphp
         <x-nawasara-ui::table
             :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Created', 'Sync', '']"
@@ -76,10 +76,10 @@
             <x-slot:table>
                 @forelse ($this->records as $record)
                     @php $asset = $this->assetMap[$record->record_id] ?? null; @endphp
-                    <tr wire:key="dns-{{ $record->id }}" class="{{ in_array((string) $record->id, $selected) ? 'bg-blue-50/50 dark:bg-blue-900/10' : '' }}">
+                    <tr wire:key="dns-{{ $record->id }}" class="{{ in_array((string) $record->id, $selected) ? 'bg-emerald-50/60 dark:bg-emerald-900/15' : '' }}">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <input type="checkbox" wire:model.live="selected" value="{{ $record->id }}"
-                                class="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">
+                                class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php

@@ -13,14 +13,21 @@
     </x-nawasara-ui::filter-bar>
 
     @if (! $opdId)
-        <div class="text-center py-12">
-            <x-lucide-building-2 class="size-12 mx-auto text-gray-300 dark:text-neutral-600" />
-            <p class="mt-3 text-sm text-gray-500 dark:text-neutral-400">
-                Pilih OPD untuk melihat agregat traffic semua domain milik OPD tersebut.
+        {{-- Premium empty state — pilih OPD --}}
+        <div class="text-center py-16 px-6 border-2 border-dashed border-gray-200 dark:border-neutral-700 rounded-xl bg-gray-50/50 dark:bg-neutral-900/40">
+            <div class="inline-flex items-center justify-center size-14 rounded-2xl bg-gray-100 dark:bg-neutral-800 mb-4">
+                <x-lucide-building-2 class="size-7 text-gray-400 dark:text-neutral-500" />
+            </div>
+            <p class="text-base font-semibold text-gray-800 dark:text-neutral-200">
+                Pilih OPD untuk melihat agregat traffic
+            </p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-neutral-400 max-w-sm mx-auto">
+                Filter di atas — pilih salah satu OPD dan periode waktu untuk lihat traffic agregat semua domain milik OPD tersebut.
             </p>
             @if ($this->opdList->isEmpty())
-                <p class="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
-                    Belum ada OPD yang memiliki domain dari Cloudflare. Lakukan Sync ke Registry di halaman Zones terlebih dahulu.
+                <p class="mt-3 text-xs text-amber-700 dark:text-amber-400 max-w-md mx-auto">
+                    <x-lucide-triangle-alert class="size-3 inline -mt-0.5" />
+                    Belum ada OPD dengan domain dari Cloudflare. Lakukan Sync ke Registry di halaman Zones terlebih dahulu.
                 </p>
             @endif
         </div>
@@ -28,10 +35,10 @@
         @php $rollup = $this->rollup; @endphp
 
         @if (! empty($rollup['error']))
-            <div class="mb-6 p-4 rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
+            <div class="mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
                 <div class="flex gap-3">
-                    <x-lucide-triangle-alert class="size-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300">{{ $rollup['error'] }}</p>
+                    <x-lucide-triangle-alert class="size-5 flex-shrink-0 text-amber-700 dark:text-amber-400 mt-0.5" />
+                    <p class="text-sm text-amber-800 dark:text-amber-300">{{ $rollup['error'] }}</p>
                 </div>
             </div>
         @endif
@@ -51,65 +58,47 @@
                 Agregat dari <strong>{{ $domainCount }} domain</strong> milik OPD ini.
             </div>
 
-            {{-- Stats Cards --}}
+            {{-- Stats Cards — pakai design-system stat-card untuk konsistensi
+                 dengan analytics overview (sister page) dan dashboard /home.
+                 Description sub-label kasih cache hit rate insight. --}}
+            @php
+                $totalReq = $requests['all'] ?? 0;
+                $cacheRate = $totalReq > 0 ? round((($requests['cached'] ?? 0) / $totalReq) * 100, 1) : 0;
+                $totalBw = $bandwidth['all'] ?? 0;
+                $bwSavedPct = $totalBw > 0 ? round((($bandwidth['cached'] ?? 0) / $totalBw) * 100, 1) : 0;
+            @endphp
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 p-5">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                            <x-lucide-globe class="size-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 dark:text-neutral-400">Total Requests</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-neutral-200">{{ number_format($requests['all']) }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex gap-3 text-xs">
-                        <span class="text-green-600 dark:text-green-400">Cached: {{ number_format($requests['cached']) }}</span>
-                        <span class="text-gray-400">|</span>
-                        <span class="text-orange-600 dark:text-orange-400">Uncached: {{ number_format($requests['uncached']) }}</span>
-                    </div>
-                </div>
+                <x-nawasara-ui::stat-card
+                    label="Total Requests"
+                    :value="number_format($totalReq)"
+                    icon="lucide-globe"
+                    color="primary"
+                    :description="$totalReq > 0 ? $cacheRate.'% cached' : null"
+                    accent />
 
-                <div class="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 p-5">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                            <x-lucide-hard-drive class="size-5 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 dark:text-neutral-400">Bandwidth</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-neutral-200">{{ $this->formatBytes($bandwidth['all']) }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex gap-3 text-xs">
-                        <span class="text-green-600 dark:text-green-400">Cached: {{ $this->formatBytes($bandwidth['cached']) }}</span>
-                        <span class="text-gray-400">|</span>
-                        <span class="text-orange-600 dark:text-orange-400">Uncached: {{ $this->formatBytes($bandwidth['uncached']) }}</span>
-                    </div>
-                </div>
+                <x-nawasara-ui::stat-card
+                    label="Bandwidth"
+                    :value="$this->formatBytes($totalBw)"
+                    icon="lucide-hard-drive"
+                    color="info"
+                    :description="$totalBw > 0 ? $bwSavedPct.'% via cache' : null"
+                    accent />
 
-                <div class="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 p-5">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-                            <x-lucide-shield-alert class="size-5 text-red-600 dark:text-red-400" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 dark:text-neutral-400">Threats Blocked</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-neutral-200">{{ number_format($threats['all']) }}</p>
-                        </div>
-                    </div>
-                </div>
+                <x-nawasara-ui::stat-card
+                    label="Threats Blocked"
+                    :value="number_format($threats['all'] ?? 0)"
+                    icon="lucide-shield-alert"
+                    :color="($threats['all'] ?? 0) > 0 ? 'danger' : 'neutral'"
+                    description="oleh Cloudflare WAF"
+                    accent />
 
-                <div class="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 p-5">
-                    <div class="flex items-center gap-3">
-                        <div class="flex-shrink-0 size-10 flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
-                            <x-lucide-users class="size-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 dark:text-neutral-400">Unique Visitors</p>
-                            <p class="text-2xl font-bold text-gray-800 dark:text-neutral-200">{{ number_format($uniques['all']) }}</p>
-                        </div>
-                    </div>
-                </div>
+                <x-nawasara-ui::stat-card
+                    label="Unique Visitors"
+                    :value="number_format($uniques['all'] ?? 0)"
+                    icon="lucide-users"
+                    color="success"
+                    :description="number_format(($uniques['all'] ?? 0) / max($domainCount, 1), 0).'/domain rata-rata'"
+                    accent />
             </div>
 
             {{-- Per-Domain Breakdown --}}

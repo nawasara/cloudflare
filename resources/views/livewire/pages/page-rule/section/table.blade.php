@@ -43,7 +43,7 @@
                                 <div class="text-xs text-gray-500 dark:text-neutral-500 font-mono break-all">{{ $valueText }}</div>
                             @endif
                             @if (count($rule['actions'] ?? []) > 1)
-                                <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                <div class="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
                                     +{{ count($rule['actions']) - 1 }} action lain
                                 </div>
                             @endif

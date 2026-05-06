@@ -16,7 +16,7 @@
         <p class="text-xs text-gray-500 dark:text-neutral-400 mb-2">
             Cloudflare sedang memigrasikan Page Rules ke
             <a href="https://developers.cloudflare.com/rules/" target="_blank" rel="noopener"
-                class="text-blue-600 dark:text-blue-400 hover:underline">Rules engine baru</a>
+                class="text-emerald-700 dark:text-emerald-400 hover:underline font-medium">Rules engine baru</a>
             (Configuration / Transform / Cache / Redirect Rules). Page Rules masih bekerja tapi tergolong legacy.
         </p>
 

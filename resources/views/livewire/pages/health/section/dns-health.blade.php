@@ -140,8 +140,8 @@
                             @php
                                 $days = $h->ssl_days_remaining;
                                 $sslClass = match(true) {
-                                    $days < 0 => 'text-red-600 dark:text-red-400',
-                                    $days <= 14 => 'text-yellow-600 dark:text-yellow-400',
+                                    $days < 0 => 'text-rose-600 dark:text-rose-400',
+                                    $days <= 14 => 'text-amber-700 dark:text-amber-400',
                                     default => 'text-green-600 dark:text-green-400',
                                 };
                             @endphp
