@@ -5,10 +5,10 @@
             @if ($this->lastSyncedAt)
                 <span><x-lucide-clock class="size-3 inline" /> Last sync: {{ $this->lastSyncedAt }}</span>
             @else
-                <span class="text-yellow-600">Belum pernah di-sync. Klik "Sync Sekarang" untuk fetch dari Cloudflare.</span>
+                <span class="text-amber-700 dark:text-amber-400">Belum pernah di-sync. Klik "Sync Sekarang" untuk fetch dari Cloudflare.</span>
             @endif
         </div>
-        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-blue-600 hover:underline">
+        <a href="{{ url('admin/sync/jobs') }}" wire:navigate class="text-emerald-700 dark:text-emerald-400 hover:underline font-medium">
             Lihat Sync Jobs →
         </a>
     </div>
@@ -218,11 +218,11 @@
         <div class="space-y-4">
             <div class="flex gap-3">
                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300">
-                    <input type="radio" wire:model.live="purgeType" value="all" class="text-blue-600">
+                    <input type="radio" wire:model.live="purgeType" value="all" class="text-emerald-600">
                     Purge Everything
                 </label>
                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300">
-                    <input type="radio" wire:model.live="purgeType" value="urls" class="text-blue-600">
+                    <input type="radio" wire:model.live="purgeType" value="urls" class="text-emerald-600">
                     Custom URLs
                 </label>
             </div>
@@ -235,8 +235,8 @@
                         placeholder="https://example.com/page1&#10;https://example.com/page2"></textarea>
                 </div>
             @else
-                <p class="text-sm text-yellow-600 dark:text-yellow-400">
-                    <x-lucide-alert-triangle class="size-4 inline -mt-0.5" />
+                <p class="text-sm text-amber-700 dark:text-amber-400">
+                    <x-lucide-triangle-alert class="size-4 inline -mt-0.5" />
                     Ini akan menghapus semua cache untuk <strong>{{ $purgeZoneName }}</strong>. Proses ini tidak bisa dibatalkan.
                 </p>
             @endif

@@ -68,6 +68,33 @@ class CloudflareZoneRepository implements SyncedRepository
         return $this->lastSuccessfulSyncAt('cloudflare', 'sync_zones');
     }
 
+    /**
+     * Aggregate stats untuk hero stats row di Zones page.
+     *
+     * KPI yang dipilih:
+     * - total: jumlah zone yang ter-track
+     * - active: zone yang status-nya 'active' di Cloudflare (bukan pending/moved)
+     * - ssl_strict: zone dengan SSL mode 'full' atau 'strict' (security indicator —
+     *   'flexible' / 'off' adalah konfigurasi rawan MITM)
+     * - dns_records: total DNS record di seluruh zone (capacity / DNS hygiene)
+     */
+    public function stats(): array
+    {
+        $row = CloudflareZone::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_count")
+            ->selectRaw("SUM(CASE WHEN ssl_mode IN ('full', 'strict') THEN 1 ELSE 0 END) as ssl_strict_count")
+            ->selectRaw('SUM(dns_records_count) as dns_total')
+            ->first();
+
+        return [
+            'total' => (int) ($row?->total ?? 0),
+            'active' => (int) ($row?->active_count ?? 0),
+            'ssl_strict' => (int) ($row?->ssl_strict_count ?? 0),
+            'dns_records' => (int) ($row?->dns_total ?? 0),
+        ];
+    }
+
     protected function query(array $filters = [])
     {
         return CloudflareZone::query()
