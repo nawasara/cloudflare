@@ -36,8 +36,7 @@
                 label="Filter"
                 :state="['typeFilter' => $typeFilter, 'sort' => $sort]"
                 :multiple="['typeFilter']"
-                :labels="['typeFilter' => $typeOptions, 'sort' => $sortOptions]"
-                :dimensions="['sort' => 'Urutkan']">
+                :labels="['typeFilter' => $typeOptions, 'sort' => $sortOptions]">
                 <x-nawasara-ui::filter-group label="Type" model="typeFilter" :items="$typeOptions" icon="lucide-tag" />
                 <x-nawasara-ui::filter-group label="Urutkan" model="sort" :items="$sortOptions" icon="lucide-arrow-up-down" />
             </x-nawasara-ui::filter-panel>
