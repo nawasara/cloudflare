@@ -52,9 +52,14 @@ class Table extends Component
     public $formOpdId = '';
     public $formPicId = '';
 
-    // Bulk selection
+    /**
+     * Selected record ids for bulk actions. Toggling individual checkboxes
+     * is handled by Alpine in the view (zero round-trips per click); the
+     * frontend pushes the latest array via $wire.set('selected', ...) right
+     * before invoking bulkDelete(). The selectAll header checkbox is also
+     * Alpine-driven, computed from selectedIds vs the current page's ids.
+     */
     public array $selected = [];
-    public bool $selectAll = false;
 
     public function mount(): void
     {
@@ -104,15 +109,15 @@ class Table extends Component
     public function updatedTypeFilter(): void { $this->resetPage(); $this->resetSelection(); }
     public function updatedSort(): void { $this->resetPage(); $this->resetSelection(); }
 
-    public function updatedSelectAll(bool $value): void
-    {
-        $this->selected = $value ? $this->records->pluck('id')->map(fn ($id) => (string) $id)->all() : [];
-    }
-
+    /**
+     * Reset selection from server-side flows (filter changes, post-action
+     * cleanup). Frontend Alpine state should also call clear() locally on
+     * the same triggers - the wire:loading/morph cycle propagates this back
+     * via the empty $selected array on next render.
+     */
     public function resetSelection(): void
     {
         $this->selected = [];
-        $this->selectAll = false;
     }
 
     public function refreshRecords(): void

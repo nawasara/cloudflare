@@ -106,39 +106,86 @@
     </div>
 
     @if ($zone)
-        @can('cloudflare.dns.delete')
-            <x-nawasara-ui::bulk-action-bar :count="count($selected)" clearAction="resetSelection" label="record dipilih">
-                <x-nawasara-ui::button color="danger" variant="outline" size="sm" wire:click="bulkDelete" wire:confirm="HAPUS {{ count($selected) }} DNS record?">
-                    <x-slot:icon><x-lucide-trash-2 /></x-slot:icon>
-                    Delete
-                </x-nawasara-ui::button>
-            </x-nawasara-ui::bulk-action-bar>
-        @endcan
-
         @php
-            $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">';
+            $pageRecordIds = $this->records->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
         @endphp
-        <x-nawasara-ui::table
-            stickyLast
-            :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Created', 'Sync', '']"
-            :title="'DNS Records ('.$this->records->total().' records)'">
-            <x-slot:table>
-                @forelse ($this->records as $record)
-                    @php
-                        $asset = $this->assetMap[$record->record_id] ?? null;
-                        $isSelected = in_array((string) $record->id, $selected);
-                    @endphp
-                    {{-- When selected, propagate emerald bg to the sticky last cell
-                         too; the table component's default sticky cell bg is white,
-                         so we explicitly override here per row state. --}}
-                    <tr wire:key="dns-{{ $record->id }}"
-                        @class([
-                            'bg-emerald-50/60 dark:bg-emerald-900/15 [&>td:last-child]:!bg-emerald-50/60 dark:[&>td:last-child]:!bg-emerald-900/15' => $isSelected,
-                        ])>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <input type="checkbox" wire:model.live="selected" value="{{ $record->id }}"
-                                class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">
-                        </td>
+
+        {{-- Selection state lives in Alpine for zero-roundtrip checkbox toggling.
+             Each toggle updates selectedIds locally; sync to Livewire happens
+             only when a bulk action fires (Alpine pushes the latest array
+             to $wire.selected before invoking the server method).
+
+             pageRecordIds is the canonical id list for THIS page (used by
+             select-all). All comparisons stringify because Alpine x-model on
+             checkbox value="N" stores strings and the Livewire selected[]
+             also stringifies on the wire. --}}
+        <div x-data="{
+                selectedIds: @js(array_map('strval', $selected)),
+                pageIds: @js($pageRecordIds),
+                get allChecked() {
+                    return this.pageIds.length > 0 &&
+                        this.pageIds.every(id => this.selectedIds.includes(id));
+                },
+                set allChecked(v) {
+                    if (v) {
+                        const merged = new Set([...this.selectedIds, ...this.pageIds]);
+                        this.selectedIds = [...merged];
+                    } else {
+                        this.selectedIds = this.selectedIds.filter(id => ! this.pageIds.includes(id));
+                    }
+                },
+                isSelected(id) { return this.selectedIds.includes(String(id)); },
+                clear() { this.selectedIds = []; },
+                /* Push current selection to Livewire and invoke the action.
+                   Used by bulk delete so the server gets the up-to-date list
+                   despite individual toggles never having round-tripped. */
+                runBulk(action, confirm) {
+                    if (this.selectedIds.length === 0) return;
+                    if (confirm && ! window.confirm(confirm)) return;
+                    $wire.set('selected', this.selectedIds, false);
+                    $wire.call(action);
+                    this.clear();
+                },
+            }">
+
+            @can('cloudflare.dns.delete')
+                <x-nawasara-ui::bulk-action-bar
+                    xCount="selectedIds.length"
+                    xClear="clear()"
+                    label="record dipilih">
+                    {{-- Bulk delete uses runBulk() to sync selectedIds → Livewire
+                         then call the server action in one batched request. --}}
+                    <button type="button"
+                        x-on:click="runBulk('bulkDelete', `HAPUS ${selectedIds.length} DNS record?`)"
+                        class="inline-flex items-center justify-center gap-2 select-none font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none rounded-md dark:focus-visible:ring-offset-gray-900 h-9 px-3 text-sm border border-rose-600 text-rose-700 hover:bg-rose-50 dark:border-rose-400 dark:text-rose-300 dark:hover:bg-rose-950">
+                        <x-lucide-trash-2 class="size-4" />
+                        <span>Delete</span>
+                    </button>
+                </x-nawasara-ui::bulk-action-bar>
+            @endcan
+
+            @php
+                $selectAllHeader = '<input type="checkbox" x-model="allChecked" class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">';
+            @endphp
+            <x-nawasara-ui::table
+                stickyLast
+                :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Created', 'Sync', '']"
+                :title="'DNS Records ('.$this->records->total().' records)'">
+                <x-slot:table>
+                    @forelse ($this->records as $record)
+                        @php $asset = $this->assetMap[$record->record_id] ?? null; @endphp
+                        {{-- Selection highlight is bound to Alpine state, not the
+                             server-side $selected array. x-bind:class flips the
+                             emerald bg + sticky cell override the moment the user
+                             toggles the checkbox, no round-trip needed. --}}
+                        <tr wire:key="dns-{{ $record->id }}"
+                            x-bind:class="isSelected({{ $record->id }})
+                                ? 'bg-emerald-50/60 dark:bg-emerald-900/15 [&>td:last-child]:!bg-emerald-50/60 dark:[&>td:last-child]:!bg-emerald-900/15'
+                                : ''">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="checkbox" x-model="selectedIds" value="{{ $record->id }}"
+                                    class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">
+                            </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php
                                 $typeBadge = match($record->type) {
@@ -251,6 +298,7 @@
                 {{ $this->records->links() }}
             </x-slot:footer>
         </x-nawasara-ui::table>
+        </div>{{-- /x-data selection wrapper --}}
     @else
         <div class="text-center py-12">
             <x-lucide-globe class="size-12 mx-auto text-gray-300 dark:text-neutral-600" />
