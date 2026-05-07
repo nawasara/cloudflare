@@ -20,41 +20,35 @@
         $sortOptions = ['newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi', 'name' => 'Nama (A-Z)'];
     @endphp
 
-    {{-- Toolbar — 3-zone layout for clear visual hierarchy:
+    {{-- Toolbar — single-row layout that stays stable from mobile to desktop.
 
-         [filters] ............ [search] [actions]
-         ↓ chips (filter-panel auto + manual search chip)
+         Mobile (<sm): everything stacks vertically, full width.
+         Tablet+ (sm): one row with filters left, search expands center,
+                       actions stick right.
 
-         - Filters (left): Zone scope + Filter panel. Always visible.
-         - Search (middle): grows up to max-w-md, ml-auto pushes actions right.
-         - Actions (right): icon-only buttons with tooltips. Sync Sekarang =
-           neutral utility. Sync ke Registry = primary (intentional action).
-         - On narrow screens (< sm), search wraps to its own row full-width
-           and actions stay on the top toolbar row.
-
-         Search keeps its own 300ms wire:model.live.debounce - typing-driven
-         flow expects near-instant feedback, separate from filter-panel's
-         click-driven 3s debounce. --}}
+         filter-panel teleports its chips into [data-filter-chips] below the
+         toolbar so chip wrapping doesn't disturb the toolbar grid. The
+         search chip joins them in the same row for visual consistency. --}}
     <div class="space-y-2 mb-4">
-        <div class="flex flex-wrap items-center gap-2">
-            {{-- Filter zone --}}
-            <x-nawasara-ui::filter-dropdown
-                :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
-                model="zone" :items="$this->zoneOptions" />
+        <div class="flex flex-col md:flex-row md:flex-nowrap md:items-center gap-2">
+            {{-- Filter zone (always together, never wraps internally) --}}
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <x-nawasara-ui::filter-dropdown
+                    :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
+                    model="zone" :items="$this->zoneOptions" />
 
-            <x-nawasara-ui::filter-panel
-                label="Filter"
-                :state="['typeFilter' => $typeFilter, 'sort' => $sort]"
-                :multiple="['typeFilter']"
-                :labels="['typeFilter' => $typeOptions, 'sort' => $sortOptions]">
-                <x-nawasara-ui::filter-group label="Type" model="typeFilter" :items="$typeOptions" icon="lucide-tag" />
-                <x-nawasara-ui::filter-group label="Urutkan" model="sort" :items="$sortOptions" icon="lucide-arrow-up-down" />
-            </x-nawasara-ui::filter-panel>
+                <x-nawasara-ui::filter-panel
+                    label="Filter"
+                    :state="['typeFilter' => $typeFilter, 'sort' => $sort]"
+                    :multiple="['typeFilter']"
+                    :labels="['typeFilter' => $typeOptions, 'sort' => $sortOptions]">
+                    <x-nawasara-ui::filter-group label="Type" model="typeFilter" :items="$typeOptions" icon="lucide-tag" />
+                    <x-nawasara-ui::filter-group label="Urutkan" model="sort" :items="$sortOptions" icon="lucide-arrow-up-down" />
+                </x-nawasara-ui::filter-panel>
+            </div>
 
-            {{-- Search zone — capped width to keep input scannable, ml-auto on
-                 sm+ pushes actions to the far right. min-w-0 lets the input
-                 shrink properly inside the flex container. --}}
-            <div class="relative w-full sm:w-auto sm:flex-1 sm:max-w-md sm:ml-auto min-w-0 order-last sm:order-none">
+            {{-- Search zone — fills available space between filters and actions. --}}
+            <div class="relative w-full md:flex-1 md:min-w-0">
                 <div class="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3.5">
                     <x-lucide-search class="shrink-0 size-4 text-gray-400 dark:text-neutral-500" />
                 </div>
@@ -63,40 +57,40 @@
                     class="h-10 ps-10 pe-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-emerald-600 focus:ring-emerald-600 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 dark:placeholder-neutral-500 dark:focus:ring-neutral-600" />
             </div>
 
-            {{-- Action zone — icon-only with tooltips for compactness. Visual
-                 weight: Sync Sekarang outline (frequent utility), Sync ke
-                 Registry primary flat (deliberate action that touches Registry). --}}
+            {{-- Action zone — styled to match filter-dropdown idle state
+                 (border-gray-200 bg-white) so the toolbar reads as one unit.
+                 Inline buttons instead of <x-button> because we need precise
+                 visual parity with the dropdown buttons next door. --}}
             @if ($zone)
                 <div class="flex items-center gap-2 shrink-0">
                     <x-nawasara-ui::tooltip text="Sync DNS dari Cloudflare" placement="bottom">
-                        <x-nawasara-ui::button color="neutral" variant="outline" size="md"
-                            rounded="lg" wire:click="refreshRecords"
-                            aria-label="Sync Sekarang">
-                            <x-slot:icon>
-                                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshRecords" />
-                            </x-slot:icon>
-                        </x-nawasara-ui::button>
+                        <button type="button" wire:click="refreshRecords"
+                            wire:loading.attr="disabled" wire:target="refreshRecords"
+                            aria-label="Sync Sekarang"
+                            class="inline-flex items-center justify-center size-10 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700 shadow-sm transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                            <x-lucide-refresh-cw class="size-4" wire:loading.class="animate-spin" wire:target="refreshRecords" />
+                        </button>
                     </x-nawasara-ui::tooltip>
 
-                    <x-nawasara-ui::tooltip text="Sync ke Registry aset" placement="bottom">
-                        <x-nawasara-ui::button color="primary" variant="flat" size="md"
-                            rounded="lg" wire:click="syncRegistry"
-                            wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
-                            permission="cloudflare.dns.view"
-                            aria-label="Sync ke Registry">
-                            <x-slot:icon>
-                                <x-lucide-link wire:loading.class="animate-spin" wire:target="syncRegistry" />
-                            </x-slot:icon>
-                        </x-nawasara-ui::button>
-                    </x-nawasara-ui::tooltip>
+                    @can('cloudflare.dns.view')
+                        <x-nawasara-ui::tooltip text="Sync ke Registry aset" placement="bottom">
+                            <button type="button" wire:click="syncRegistry"
+                                wire:loading.attr="disabled" wire:target="syncRegistry"
+                                wire:confirm="Sinkronkan semua DNS record zone ini ke Registry aset?"
+                                aria-label="Sync ke Registry"
+                                class="inline-flex items-center justify-center size-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/40 shadow-sm transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                                <x-lucide-link class="size-4" wire:loading.class="animate-spin" wire:target="syncRegistry" />
+                            </button>
+                        </x-nawasara-ui::tooltip>
+                    @endcan
                 </div>
             @endif
         </div>
 
-        {{-- Chips row — search chip merges with filter-panel's auto-rendered
-             dimension chips for visual consistency (single row of pills below
-             the toolbar). filter-panel renders its chips via Alpine, this is
-             just the Livewire-driven search chip. --}}
+        {{-- Chips row — filter-panel teleports its chips here. The search chip
+             below is rendered by Livewire and lives alongside them. --}}
+        <div data-filter-chips></div>
+
         @if ($search)
             <div class="flex flex-wrap items-center gap-2">
                 <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
