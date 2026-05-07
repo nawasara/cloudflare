@@ -26,7 +26,14 @@ class Table extends Component
     public string $zone = '';
 
     public string $search = '';
-    public string $typeFilter = '';
+
+    /**
+     * Multi-select: list of CF record types to include (A, AAAA, CNAME, ...).
+     * Empty array = no filter (show all types). Aligns with filter-panel
+     * Alpine multi-select payload.
+     */
+    public array $typeFilter = [];
+
     public string $sort = 'newest'; // newest | oldest | modified | name
     public int $perPage = 25;
 
@@ -78,7 +85,7 @@ class Table extends Component
 
         return $this->repo()->list([
             'search' => $this->search ?: null,
-            'type' => $this->typeFilter ?: null,
+            'type' => ! empty($this->typeFilter) ? $this->typeFilter : null,
             'sort' => $this->sort ?: null,
         ], $this->perPage);
     }

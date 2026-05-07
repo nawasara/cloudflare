@@ -66,9 +66,18 @@ class CloudflareDnsRecord extends Model
         });
     }
 
-    public function scopeType($query, ?string $type)
+    /**
+     * Filter by record type. Accepts a scalar string for back-compat or an
+     * array for multi-select (e.g. ['A', 'AAAA', 'CNAME']).
+     */
+    public function scopeType($query, string|array|null $type)
     {
-        return $type ? $query->where('type', $type) : $query;
+        if ($type === null || $type === '' || (is_array($type) && empty($type))) {
+            return $query;
+        }
+        return is_array($type)
+            ? $query->whereIn('type', $type)
+            : $query->where('type', $type);
     }
 
     public function scopeProxied($query, ?bool $proxied)

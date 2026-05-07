@@ -15,18 +15,45 @@
         </a>
     </div>
 
-    <x-nawasara-ui::filter-bar searchPlaceholder="Cari nama record..." searchModel="search">
-        <x-nawasara-ui::filter-dropdown
-            :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
-            model="zone" :items="$this->zoneOptions" />
+    @php
+        $typeOptions = ['A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV'];
+        $sortOptions = ['newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi', 'name' => 'Nama (A-Z)'];
+    @endphp
 
-        <x-nawasara-ui::filter-dropdown label="Type" model="typeFilter"
-            :items="['all' => 'Semua Type', 'A' => 'A', 'AAAA' => 'AAAA', 'CNAME' => 'CNAME', 'MX' => 'MX', 'TXT' => 'TXT', 'NS' => 'NS', 'SRV' => 'SRV']" />
+    {{-- New filter pattern: standalone Zone selector (scope), then Filter panel
+         (cascading + 3s debounce + multi-select), then Search, then actions.
+         See packages/nawasara-ui/resources/views/components/filter-panel.blade.php
+         for component contract. --}}
+    <div class="space-y-2 mb-4">
+        <div class="flex flex-wrap items-center gap-2">
+            {{-- Standalone scope selector — Zone is mandatory context, not a refinement --}}
+            <x-nawasara-ui::filter-dropdown
+                :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
+                model="zone" :items="$this->zoneOptions" />
 
-        <x-nawasara-ui::filter-dropdown label="Urutkan" model="sort"
-            :items="['newest' => 'Terbaru dibuat', 'oldest' => 'Terlama dibuat', 'modified' => 'Baru dimodifikasi', 'name' => 'Nama (A-Z)']" />
+            {{-- Cascading filter panel: Type (multi) + Urutkan (single) --}}
+            <x-nawasara-ui::filter-panel
+                label="Filter"
+                :state="['typeFilter' => $typeFilter, 'sort' => $sort]"
+                :multiple="['typeFilter']"
+                :labels="['typeFilter' => $typeOptions, 'sort' => $sortOptions]"
+                :dimensions="['sort' => 'Urutkan']">
+                <x-nawasara-ui::filter-group label="Type" model="typeFilter" :items="$typeOptions" icon="lucide-tag" />
+                <x-nawasara-ui::filter-group label="Urutkan" model="sort" :items="$sortOptions" icon="lucide-arrow-up-down" />
+            </x-nawasara-ui::filter-panel>
 
-        <x-slot:actions>
+            {{-- Search input — kept on toolbar with own 300ms debounce. Reasoning:
+                 search is typing-driven and users expect immediate-ish feedback,
+                 unrelated to the click-driven filter-panel debounce. --}}
+            <div class="relative flex-1 min-w-48">
+                <div class="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3.5">
+                    <x-lucide-search class="shrink-0 size-4 text-gray-400 dark:text-neutral-500" />
+                </div>
+                <input type="text" wire:model.live.debounce.300ms="search"
+                    placeholder="Cari nama record..."
+                    class="py-2.5 ps-10 pe-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-emerald-600 focus:ring-emerald-600 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600" />
+            </div>
+
             @if ($zone)
                 <x-nawasara-ui::button color="neutral" variant="outline" size="sm" wire:click="refreshRecords">
                     <x-slot:icon>
@@ -45,17 +72,15 @@
                     Sync ke Registry
                 </x-nawasara-ui::button>
             @endif
-        </x-slot:actions>
+        </div>
 
-        <x-slot:chips>
-            @if ($typeFilter)
-                <x-nawasara-ui::filter-chip label="Type: {{ $typeFilter }}" model="typeFilter" />
-            @endif
-            @if ($search)
+        {{-- Search chip (filter-panel renders its own chips for typeFilter + sort) --}}
+        @if ($search)
+            <div class="flex flex-wrap items-center gap-2">
                 <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
-            @endif
-        </x-slot:chips>
-    </x-nawasara-ui::filter-bar>
+            </div>
+        @endif
+    </div>
 
     @if ($zone)
         @can('cloudflare.dns.delete')
