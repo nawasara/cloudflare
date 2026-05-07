@@ -16,10 +16,12 @@ use Nawasara\Registry\Models\Asset;
 use Nawasara\Registry\Models\Opd;
 use Nawasara\Registry\Models\Pic;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
+use Nawasara\Ui\Livewire\Concerns\HasExport;
 
 class Table extends Component
 {
     use HasBrowserToast;
+    use HasExport;
     use WithPagination;
 
     #[Url]
@@ -328,6 +330,67 @@ class Table extends Component
 
         $this->toastSuccess("Delete dispatched untuk {$count} record.");
         $this->resetSelection();
+    }
+
+    // ─── Export (HasExport trait) ────────────────────────
+
+    /**
+     * Base filename for exported file. Includes the active zone for context;
+     * the trait appends timestamp + extension. Per spec, the export covers
+     * the FULL dataset of the selected zone, not the filtered view.
+     */
+    protected function exportFilename(): string
+    {
+        $zoneSlug = $this->zone
+            ? str_replace('.', '-', strtolower($this->zone))
+            : 'all-zones';
+        return "dns-records-{$zoneSlug}";
+    }
+
+    /**
+     * All DNS records of the active zone, materialised as plain rows for the
+     * exporter. Includes Registry-linked OPD/PIC info because that is the most
+     * common reason to export (handover docs, audit, OPD reports). Order
+     * follows table reading order to match what users see on screen.
+     */
+    protected function exportData(): iterable
+    {
+        if (! $this->zone) {
+            return [];
+        }
+
+        $records = CloudflareDnsRecord::query()
+            ->forZone($this->zone)
+            ->orderBy('name')
+            ->get();
+
+        $assets = Asset::query()
+            ->where('package_ref', 'cloudflare')
+            ->whereIn('external_id', $records->pluck('record_id')->filter())
+            ->with(['opd:id,name,code', 'pic:id,name,position'])
+            ->get()
+            ->keyBy('external_id');
+
+        return $records->map(function ($r) use ($assets) {
+            $asset = $assets[$r->record_id] ?? null;
+            return [
+                'Type' => $r->type,
+                'Name' => $r->name,
+                'Content' => $r->content,
+                'Proxied' => in_array($r->type, ['A', 'AAAA', 'CNAME']) ? ($r->proxied ? 'Yes' : 'No') : '',
+                'TTL' => $r->ttl === 1 ? 'Auto' : $r->ttl,
+                'Priority' => $r->priority ?? '',
+                'Comment' => (string) ($r->comment ?? ''),
+                'Tags' => is_array($r->tags) ? implode(', ', $r->tags) : '',
+                'OPD' => $asset?->opd?->name ?? '',
+                'OPD Code' => $asset?->opd?->code ?? '',
+                'PIC' => $asset?->pic?->name ?? '',
+                'PIC Position' => $asset?->pic?->position ?? '',
+                'Created (Cloudflare)' => $r->cf_created_at?->format('Y-m-d H:i:s') ?? '',
+                'Modified (Cloudflare)' => $r->cf_modified_at?->format('Y-m-d H:i:s') ?? '',
+                'Sync Status' => $r->sync_status,
+            ];
+        });
     }
 
     public function render()

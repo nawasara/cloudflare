@@ -83,6 +83,13 @@
                             </button>
                         </x-nawasara-ui::tooltip>
                     @endcan
+
+                    {{-- Export full dataset of the active zone (xlsx/csv/json).
+                         Backed by HasExport trait + GenericArrayExport. --}}
+                    <x-nawasara-ui::export-button
+                        action="export"
+                        tooltip="Ekspor DNS records"
+                        permission="cloudflare.dns.view" />
                 </div>
             @endif
         </div>
@@ -112,12 +119,22 @@
             $selectAllHeader = '<input type="checkbox" wire:model.live="selectAll" class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">';
         @endphp
         <x-nawasara-ui::table
+            stickyLast
             :headers="[$selectAllHeader, 'Type', 'Name', 'Content', 'OPD / PIC', 'Proxied', 'TTL', 'Created', 'Sync', '']"
             :title="'DNS Records ('.$this->records->total().' records)'">
             <x-slot:table>
                 @forelse ($this->records as $record)
-                    @php $asset = $this->assetMap[$record->record_id] ?? null; @endphp
-                    <tr wire:key="dns-{{ $record->id }}" class="{{ in_array((string) $record->id, $selected) ? 'bg-emerald-50/60 dark:bg-emerald-900/15' : '' }}">
+                    @php
+                        $asset = $this->assetMap[$record->record_id] ?? null;
+                        $isSelected = in_array((string) $record->id, $selected);
+                    @endphp
+                    {{-- When selected, propagate emerald bg to the sticky last cell
+                         too; the table component's default sticky cell bg is white,
+                         so we explicitly override here per row state. --}}
+                    <tr wire:key="dns-{{ $record->id }}"
+                        @class([
+                            'bg-emerald-50/60 dark:bg-emerald-900/15 [&>td:last-child]:!bg-emerald-50/60 dark:[&>td:last-child]:!bg-emerald-900/15' => $isSelected,
+                        ])>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <input type="checkbox" wire:model.live="selected" value="{{ $record->id }}"
                                 class="size-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">
