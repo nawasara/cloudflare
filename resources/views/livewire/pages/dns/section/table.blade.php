@@ -95,8 +95,17 @@
         </div>
 
         {{-- Chips row — filter-panel teleports its chips here. The search chip
-             below is rendered by Livewire and lives alongside them. --}}
-        <div data-filter-chips></div>
+             below is rendered by Livewire and lives alongside them.
+
+             wire:ignore is CRITICAL: Alpine's x-teleport drops the chips DOM
+             *inside* this div, but the server template renders it empty.
+             Without wire:ignore, Livewire's morph after $wire.$commit() (which
+             fires when filter is applied) removes the teleported children
+             because they don't exist in the expected output → chips and badge
+             count disappear immediately after filtering.
+
+             The chips DOM is fully Alpine-managed; server never touches it. --}}
+        <div wire:ignore data-filter-chips></div>
 
         @if ($search)
             <div class="flex flex-wrap items-center gap-2">
