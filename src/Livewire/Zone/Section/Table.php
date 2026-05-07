@@ -13,10 +13,12 @@ use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Cloudflare\Services\ZoneRegistrySync;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
+use Nawasara\Ui\Livewire\Concerns\HasExport;
 
 class Table extends Component
 {
     use HasBrowserToast;
+    use HasExport;
     use WithPagination;
 
     #[Url(except: '')]
@@ -191,6 +193,49 @@ class Table extends Component
         if (! $parts) $parts[] = 'semua up-to-date';
 
         $this->toastSuccess('Sync registry: '.implode(', ', $parts)." (dari {$stats['total']} zone)");
+    }
+
+    /**
+     * Export filename base — timestamp + extension appended by HasExport.
+     */
+    protected function exportFilename(): string
+    {
+        return 'cloudflare-zones';
+    }
+
+    /**
+     * Export FULL zone list (no filter) per spec. Per-zone OPD assignment
+     * is included via the registry asset map so the spreadsheet is
+     * self-contained for non-Nawasara consumers (audit, reporting).
+     */
+    protected function exportData(): iterable
+    {
+        $assetMap = Asset::query()
+            ->where('package_ref', 'cloudflare')
+            ->whereNotNull('external_id')
+            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->get()
+            ->keyBy('external_id');
+
+        return CloudflareZone::query()
+            ->orderBy('name')
+            ->get()
+            ->map(function (CloudflareZone $z) use ($assetMap) {
+                $asset = $assetMap[$z->zone_id] ?? null;
+                return [
+                    'Domain' => $z->name,
+                    'Zone ID' => $z->zone_id,
+                    'Status' => $z->status,
+                    'Plan' => $z->plan_legacy_id,
+                    'DNS Records' => $z->dns_records_count,
+                    'OPD' => $asset?->opd?->name,
+                    'PIC' => $asset?->pic?->name,
+                    'SSL Mode' => $z->ssl_mode,
+                    'Security Level' => $z->security_level,
+                    'CF Created' => optional($z->cf_created_at)->format('Y-m-d H:i'),
+                    'Last Synced' => optional($z->last_synced_at)->format('Y-m-d H:i'),
+                ];
+            });
     }
 
     public function render()

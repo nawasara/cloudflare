@@ -1,14 +1,33 @@
 <div>
     @php $currentZoneName = collect($this->zones)->firstWhere('id', $zone)['name'] ?? null; @endphp
-    <x-nawasara-ui::filter-bar>
+
+    {{-- Page header — title left, primary "Tambah Rule" right.
+         Firewall rules are zone-scoped; the zone selector lives in the
+         toolbar below since it gates the entire table view. --}}
+    <x-nawasara-ui::page-header
+        title="Firewall Rules"
+        :description="$currentZoneName ? 'Zone aktif: '.$currentZoneName : 'Pilih zone untuk melihat rules.'"
+        :count="$zone ? count($this->rules).' rules' : null">
+        @can('cloudflare.waf.create')
+            <x-nawasara-ui::button wire:click="$dispatch('openCreateFirewall')" color="success"
+                @click="$dispatch('open-modal', 'firewall-form')">
+                <x-slot:icon><x-lucide-plus class="size-4" /></x-slot:icon>
+                Tambah Rule
+            </x-nawasara-ui::button>
+        @endcan
+    </x-nawasara-ui::page-header>
+
+    {{-- Zone selector. Stays as a single-select <x-filter-dropdown>
+         because picking a zone is a hard scope (the entire table view
+         depends on it), not a multi-dimensional filter. --}}
+    <div class="mb-4">
         <x-nawasara-ui::filter-dropdown
-            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
             model="zone" :items="$this->zoneOptions" />
-    </x-nawasara-ui::filter-bar>
+    </div>
 
     @if ($zone)
-        <x-nawasara-ui::table :headers="['Deskripsi', 'Expression', 'Action', 'Status', '']"
-            :title="'Firewall Rules (' . count($this->rules) . ' rules)'">
+        <x-nawasara-ui::table stickyLast :headers="['Deskripsi', 'Expression', 'Action', 'Status', '']">
             <x-slot:table>
                 @forelse ($this->rules as $rule)
                     <tr>

@@ -7,15 +7,31 @@
         $forwardingCodes = \Nawasara\Cloudflare\Livewire\PageRule\Section\Table::FORWARDING_STATUS_CODES;
     @endphp
 
-    <x-nawasara-ui::filter-bar>
+    {{-- Page header — title left, primary "Tambah Rule" right.
+         Page Rules note explains they're being legacy-deprecated by
+         Cloudflare's new Rules engine. --}}
+    <x-nawasara-ui::page-header
+        title="Page Rules"
+        description="Cloudflare sedang memigrasikan Page Rules ke Rules engine baru (Configuration / Transform / Cache / Redirect Rules). Masih bekerja tapi tergolong legacy."
+        :count="$zone ? count($this->rules).' rules' : null">
+        @can('cloudflare.pagerule.create')
+            <x-nawasara-ui::button color="success" wire:click="$dispatch('openCreatePageRule')"
+                @click="$dispatch('open-modal', 'pagerule-form')">
+                <x-slot:icon><x-lucide-plus /></x-slot:icon>
+                Tambah Rule
+            </x-nawasara-ui::button>
+        @endcan
+    </x-nawasara-ui::page-header>
+
+    {{-- Zone selector. Single hard scope, not a dimensional filter. --}}
+    <div class="mb-4">
         <x-nawasara-ui::filter-dropdown
-            :label="$currentZoneName ? 'Zone: ' . $currentZoneName : 'Zone'"
+            :label="$currentZoneName ? 'Zone: '.$currentZoneName : 'Zone'"
             model="zone" :items="$this->zoneOptions" />
-    </x-nawasara-ui::filter-bar>
+    </div>
 
     @if ($zone)
-        <x-nawasara-ui::table :headers="['Priority', 'Target', 'Action', 'Status', '']"
-            :title="'Page Rules (' . count($this->rules) . ' rules)'">
+        <x-nawasara-ui::table stickyLast :headers="['Priority', 'Target', 'Action', 'Status', '']">
             <x-slot:table>
                 @forelse ($this->rules as $rule)
                     @php
