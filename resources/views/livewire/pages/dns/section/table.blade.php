@@ -229,13 +229,9 @@
                                     @endif
                                 </div>
                             @elseif ($asset)
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                    Belum ditetapkan
-                                </span>
+                                <x-nawasara-ui::badge color="warning">Belum ditetapkan</x-nawasara-ui::badge>
                             @else
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
-                                    Belum di-link
-                                </span>
+                                <x-nawasara-ui::badge color="neutral">Belum di-link</x-nawasara-ui::badge>
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">

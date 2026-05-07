@@ -81,27 +81,23 @@
                                 @endif
                             </div>
                         @elseif ($asset)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                Belum ditetapkan
-                            </span>
+                            <x-nawasara-ui::badge color="warning">Belum ditetapkan</x-nawasara-ui::badge>
                         @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-neutral-700 dark:text-neutral-400">
-                                Belum di-link
-                            </span>
+                            <x-nawasara-ui::badge color="neutral">Belum di-link</x-nawasara-ui::badge>
                         @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @php
-                            $statusClass = match($zone->status) {
-                                'active' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-                                'pending' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-                                'moved', 'deleted' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-                                default => 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-neutral-300',
+                            $statusColor = match($zone->status) {
+                                'active' => 'success',
+                                'pending' => 'warning',
+                                'moved', 'deleted' => 'danger',
+                                default => 'neutral',
                             };
                         @endphp
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
+                        <x-nawasara-ui::badge :color="$statusColor">
                             {{ ucfirst($zone->status ?? 'unknown') }}
-                        </span>
+                        </x-nawasara-ui::badge>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-neutral-400">
                         {{ $zone->plan_name ?? '-' }}

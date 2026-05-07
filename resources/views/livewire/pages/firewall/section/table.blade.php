@@ -41,17 +41,20 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @php
-                                $actionBadge = match($rule['action'] ?? '') {
-                                    'block' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-                                    'challenge', 'js_challenge', 'managed_challenge' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-                                    'allow' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-                                    'log' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-                                    default => 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-neutral-300',
+                                // Map Cloudflare WAF actions to badge color tokens.
+                                // 'block' = danger; challenge variants = warning;
+                                // 'allow' = success; 'log' = neutral informational.
+                                $actionColor = match($rule['action'] ?? '') {
+                                    'block' => 'danger',
+                                    'challenge', 'js_challenge', 'managed_challenge' => 'warning',
+                                    'allow' => 'success',
+                                    'log' => 'blue',
+                                    default => 'neutral',
                                 };
                             @endphp
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $actionBadge }}">
+                            <x-nawasara-ui::badge :color="$actionColor">
                                 {{ ucfirst(str_replace('_', ' ', $rule['action'] ?? 'unknown')) }}
-                            </span>
+                            </x-nawasara-ui::badge>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             @if ($rule['paused'] ?? false)

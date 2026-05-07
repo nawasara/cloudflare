@@ -103,9 +103,9 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         @if ($result === true)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Success</span>
+                            <x-nawasara-ui::badge color="success">Success</x-nawasara-ui::badge>
                         @elseif ($result === false)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Failed</span>
+                            <x-nawasara-ui::badge color="danger">Failed</x-nawasara-ui::badge>
                         @else
                             <span class="text-xs text-gray-400">-</span>
                         @endif
