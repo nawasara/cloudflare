@@ -96,8 +96,16 @@
                         </x-nawasara-ui::badge>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <x-nawasara-ui::badge :color="$stateColor($checks['cert_expiry']['state'])"
-                            @if (! empty($checks['cert_expiry']['hint'])) title="{{ $checks['cert_expiry']['hint'] }}" @endif>
+                        {{-- Pre-compute hint supaya bisa dipasang via plain
+                             `title=""` HTML attribute. Hindari `:title="..."`
+                             yang di Alpine subtree akan di-treat sebagai
+                             x-bind:title dan trigger ReferenceError. Hindari
+                             juga @if/@endif inline di attribute list component
+                             tag (Blade parser eror "unexpected endif"). --}}
+                        @php $expiryHint = $checks['cert_expiry']['hint'] ?? ''; @endphp
+                        <x-nawasara-ui::badge
+                            :color="$stateColor($checks['cert_expiry']['state'])"
+                            title="{{ $expiryHint }}">
                             {{ $checks['cert_expiry']['value'] }}
                         </x-nawasara-ui::badge>
                     </td>
