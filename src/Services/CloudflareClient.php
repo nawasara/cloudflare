@@ -235,6 +235,65 @@ class CloudflareClient
         return $this->api()->delete("/zones/{$zoneId}/firewall/rules/{$ruleId}")->successful();
     }
 
+    // ─── IP Access Rules (account-level WAF allowlist/blocklist) ─
+
+    /**
+     * List account-level IP Access Rules, optionally filtered by the rule
+     * notes (used as a soft tag — e.g. find rules created by site-scanner).
+     *
+     * Cloudflare docs:
+     *   https://developers.cloudflare.com/api/operations/ip-access-rules-for-an-account-list-ip-access-rules
+     */
+    public function listIpAccessRules(?string $notesContains = null, int $perPage = 50): array
+    {
+        $creds = $this->credentials();
+
+        $params = [
+            'account.id' => $creds['account_id'],
+            'per_page' => $perPage,
+        ];
+        if ($notesContains !== null) {
+            $params['notes'] = $notesContains;
+        }
+
+        $response = $this->api()->get('/user/firewall/access_rules/rules', $params);
+
+        return $response->successful() ? $response->json('result', []) : [];
+    }
+
+    /**
+     * Create an account-level IP Access Rule.
+     *
+     * @param  string  $mode    'whitelist' | 'block' | 'challenge' | 'js_challenge' | 'managed_challenge'
+     * @param  string  $target  'ip' | 'ip6' | 'ip_range' | 'asn' | 'country'
+     * @param  string  $value   The IP, CIDR, ASN, or 2-letter country code
+     * @param  string|null  $notes  Optional tag — store identifier here for later cleanup
+     * @return array|null  The created rule's payload, or null on failure
+     */
+    public function createIpAccessRule(
+        string $mode,
+        string $target,
+        string $value,
+        ?string $notes = null,
+    ): ?array {
+        $payload = [
+            'mode' => $mode,
+            'configuration' => ['target' => $target, 'value' => $value],
+        ];
+        if ($notes !== null) {
+            $payload['notes'] = $notes;
+        }
+
+        $response = $this->api()->post('/user/firewall/access_rules/rules', $payload);
+
+        return $response->successful() ? $response->json('result') : null;
+    }
+
+    public function deleteIpAccessRule(string $ruleId): bool
+    {
+        return $this->api()->delete("/user/firewall/access_rules/rules/{$ruleId}")->successful();
+    }
+
     // ─── Analytics ──────────────────────────────────────
 
     /**
