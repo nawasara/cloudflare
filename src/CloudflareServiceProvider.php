@@ -35,7 +35,22 @@ class CloudflareServiceProvider extends ServiceProvider
                 // `$schedule->command('cloudflare:sync-registry')` silently
                 // died every run ("no commands defined in the cloudflare
                 // namespace") and the registry hadn't synced in a week. The
-                // run logic lives in the services, so call them directly.
+                // run logic lives in the services/jobs, so dispatch directly.
+
+                // Primary sync: pull zones + DNS records from the Cloudflare API
+                // into the cloudflare_* tables. This is what drives the "Last
+                // sync" shown on the Zones/DNS pages (lastSyncedAt reads the
+                // sync_zones / sync_dns_records SyncJob rows). It was previously
+                // NOT scheduled at all — only run on the UI's manual refresh —
+                // so "Last sync" sat a week stale. Dispatch zones first, then
+                // DNS (the DNS job reads the zones table).
+                $schedule->call(function () {
+                    \Nawasara\Cloudflare\Jobs\SyncCloudflareZonesJob::dispatch(triggerSource: 'scheduled');
+                    \Nawasara\Cloudflare\Jobs\SyncCloudflareDnsRecordsJob::dispatch(triggerSource: 'scheduled');
+                })
+                    ->name('cloudflare:sync-api')
+                    ->everyThirtyMinutes()
+                    ->withoutOverlapping(25);
 
                 // Detect new/changed/deleted CF records and surface them in the registry.
                 $schedule->call(function () {
