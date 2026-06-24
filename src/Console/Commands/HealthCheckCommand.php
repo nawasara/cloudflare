@@ -3,9 +3,7 @@
 namespace Nawasara\Cloudflare\Console\Commands;
 
 use Illuminate\Console\Command;
-use Nawasara\Cloudflare\Models\EndpointHealth;
 use Nawasara\Cloudflare\Services\DnsHealthChecker;
-use Nawasara\Registry\Models\Asset;
 
 class HealthCheckCommand extends Command
 {
@@ -24,53 +22,17 @@ class HealthCheckCommand extends Command
         $limit = $this->option('limit') ? (int) $this->option('limit') : null;
         $staleMinutes = (int) $this->option('stale');
 
-        $query = Asset::query()
-            ->where('package_ref', 'cloudflare')
-            ->where('type', 'subdomain')
-            ->whereNotNull('identifier');
+        // Run logic lives in the service so the scheduler can call it without
+        // the Artisan command registry (see DnsHealthChecker::runHealthCheck).
+        $stats = $checker->runHealthCheck($withSsl, $chunk, $limit, $staleMinutes);
 
-        if ($staleMinutes > 0) {
-            $cutoff = now()->subMinutes($staleMinutes);
-            $col = $withSsl ? 'ssl_checked_at' : 'checked_at';
-            $freshIds = EndpointHealth::whereNotNull($col)
-                ->where($col, '>=', $cutoff)
-                ->pluck('identifier');
-            if ($freshIds->isNotEmpty()) {
-                $query->whereNotIn('identifier', $freshIds);
-            }
-        }
-
-        if ($limit) {
-            $query->limit($limit);
-        }
-
-        $identifiers = $query->pluck('identifier')->all();
-        $total = count($identifiers);
-
-        if ($total === 0) {
+        if ($stats['total'] === 0) {
             $this->info('Tidak ada record yang perlu di-check (semua masih segar).');
             return self::SUCCESS;
         }
 
         $mode = $withSsl ? 'HTTP+SSL' : 'HTTP only';
-        $this->info("Checking {$total} endpoints ({$mode}, chunk={$chunk})...");
-
-        $bar = $this->output->createProgressBar($total);
-        $bar->start();
-
-        $stats = ['ok' => 0, 'warning' => 0, 'critical' => 0, 'unknown' => 0];
-
-        foreach (array_chunk($identifiers, $chunk) as $batch) {
-            $results = $checker->checkMany($batch, $withSsl, $chunk);
-            foreach ($results as $r) {
-                $state = $r['state'] ?? 'unknown';
-                $stats[$state] = ($stats[$state] ?? 0) + 1;
-            }
-            $bar->advance(count($batch));
-        }
-
-        $bar->finish();
-        $this->newLine(2);
+        $this->info("Checked {$stats['total']} endpoints ({$mode}, chunk={$chunk}).");
 
         $this->table(
             ['ok', 'warning', 'critical', 'unknown'],

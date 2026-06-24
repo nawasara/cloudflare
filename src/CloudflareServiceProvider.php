@@ -29,21 +29,42 @@ class CloudflareServiceProvider extends ServiceProvider
             $this->app->booted(function () {
                 $schedule = $this->app->make(Schedule::class);
 
+                // Dispatch via $schedule->call(), NOT $schedule->command().
+                // Package console commands do not reliably surface in the
+                // Artisan kernel when the scheduler process boots, so
+                // `$schedule->command('cloudflare:sync-registry')` silently
+                // died every run ("no commands defined in the cloudflare
+                // namespace") and the registry hadn't synced in a week. The
+                // run logic lives in the services, so call them directly.
+
                 // Detect new/changed/deleted CF records and surface them in the registry.
-                $schedule->command('cloudflare:sync-registry')
+                $schedule->call(function () {
+                    $cf = $this->app->make(CloudflareClient::class);
+                    $this->app->make(\Nawasara\Cloudflare\Services\ZoneRegistrySync::class)->sync();
+                    $dnsSync = $this->app->make(\Nawasara\Cloudflare\Services\DnsRegistrySync::class);
+                    foreach ($cf->getCachedZones() as $zone) {
+                        $dnsSync->syncZone($zone['id']);
+                    }
+                })
+                    ->name('cloudflare:sync-registry')
                     ->everyThirtyMinutes()
-                    ->withoutOverlapping(25)
-                    ->runInBackground();
+                    ->withoutOverlapping(25);
 
-                $schedule->command('cloudflare:health-check --stale=10')
+                $schedule->call(function () {
+                    $this->app->make(\Nawasara\Cloudflare\Services\DnsHealthChecker::class)
+                        ->runHealthCheck(withSsl: false, chunk: 50, limit: null, staleMinutes: 10);
+                })
+                    ->name('cloudflare:health-check')
                     ->everyFifteenMinutes()
-                    ->withoutOverlapping(20)
-                    ->runInBackground();
+                    ->withoutOverlapping(20);
 
-                $schedule->command('cloudflare:health-check --ssl --stale=1380')
+                $schedule->call(function () {
+                    $this->app->make(\Nawasara\Cloudflare\Services\DnsHealthChecker::class)
+                        ->runHealthCheck(withSsl: true, chunk: 50, limit: null, staleMinutes: 1380);
+                })
+                    ->name('cloudflare:health-check-ssl')
                     ->dailyAt('02:00')
-                    ->withoutOverlapping(60)
-                    ->runInBackground();
+                    ->withoutOverlapping(60);
             });
         }
     }

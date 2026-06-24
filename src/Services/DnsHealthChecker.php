@@ -248,4 +248,58 @@ class DnsHealthChecker
             default => 'cURL ' . $errno . ': ' . mb_substr($message ?? '', 0, 100),
         };
     }
+
+    /**
+     * Headless health-check run: select the cloudflare subdomain assets that
+     * are due (respecting the stale window), probe them in batches, and persist
+     * results. Returns the per-state tally. This is the single source of truth
+     * for the run logic — both the cloudflare:health-check command and the
+     * scheduler ($schedule->call()) call it, so the scheduler never has to go
+     * through the Artisan command registry (which does not reliably resolve
+     * package commands when the scheduler process boots).
+     *
+     * @return array{ok:int,warning:int,critical:int,unknown:int,total:int}
+     */
+    public function runHealthCheck(
+        bool $withSsl = false,
+        int $chunk = 50,
+        ?int $limit = null,
+        int $staleMinutes = 15,
+    ): array {
+        $chunk = max(1, $chunk);
+
+        $query = \Nawasara\Registry\Models\Asset::query()
+            ->where('package_ref', 'cloudflare')
+            ->where('type', 'subdomain')
+            ->whereNotNull('identifier');
+
+        if ($staleMinutes > 0) {
+            $cutoff = now()->subMinutes($staleMinutes);
+            $col = $withSsl ? 'ssl_checked_at' : 'checked_at';
+            $freshIds = EndpointHealth::whereNotNull($col)
+                ->where($col, '>=', $cutoff)
+                ->pluck('identifier');
+            if ($freshIds->isNotEmpty()) {
+                $query->whereNotIn('identifier', $freshIds);
+            }
+        }
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        $identifiers = $query->pluck('identifier')->all();
+
+        $stats = ['ok' => 0, 'warning' => 0, 'critical' => 0, 'unknown' => 0, 'total' => count($identifiers)];
+
+        foreach (array_chunk($identifiers, $chunk) as $batch) {
+            $results = $this->checkMany($batch, $withSsl, $chunk);
+            foreach ($results as $r) {
+                $state = $r['state'] ?? 'unknown';
+                $stats[$state] = ($stats[$state] ?? 0) + 1;
+            }
+        }
+
+        return $stats;
+    }
 }
