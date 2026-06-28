@@ -4,8 +4,9 @@ $prefix = 'nawasara-cloudflare';
 
 return [
     [
-        'label' => 'Cloudflare CDN',
+        'label' => 'Cloudflare',
         'icon' => 'lucide-cloud',
+        'group' => 'Observability',
         'url' => '',
         'permission' => 'cloudflare.zone.view',
         'submenu' => [
