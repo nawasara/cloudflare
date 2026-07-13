@@ -174,7 +174,7 @@ class Table extends Component
         return Asset::query()
             ->where('package_ref', 'cloudflare')
             ->whereNotNull('external_id')
-            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->with(['opd:id,name,code', 'penanggungJawab'])
             ->get()
             ->keyBy('external_id');
     }
@@ -213,7 +213,7 @@ class Table extends Component
         $assetMap = Asset::query()
             ->where('package_ref', 'cloudflare')
             ->whereNotNull('external_id')
-            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->with(['opd:id,name,code', 'penanggungJawab'])
             ->get()
             ->keyBy('external_id');
 
@@ -222,6 +222,7 @@ class Table extends Component
             ->get()
             ->map(function (CloudflareZone $z) use ($assetMap) {
                 $asset = $assetMap[$z->zone_id] ?? null;
+                $pj = $asset?->pjProfile();
                 return [
                     'Domain' => $z->name,
                     'Zone ID' => $z->zone_id,
@@ -229,7 +230,9 @@ class Table extends Component
                     'Plan' => $z->plan_legacy_id,
                     'DNS Records' => $z->dns_records_count,
                     'OPD' => $asset?->opd?->name,
-                    'PIC' => $asset?->pic?->name,
+                    'Penanggung Jawab' => ($pj && $pj->found) ? $pj->name : null,
+                    'NIP' => ($pj && $pj->found) ? $pj->nip : null,
+                    'WhatsApp' => ($pj && $pj->found) ? $pj->whatsapp : null,
                     'SSL Mode' => $z->ssl_mode,
                     'Security Level' => $z->security_level,
                     'CF Created' => optional($z->cf_created_at)->format('Y-m-d H:i'),

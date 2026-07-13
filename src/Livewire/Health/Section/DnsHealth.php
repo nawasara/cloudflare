@@ -58,7 +58,7 @@ class DnsHealth extends Component
         $q = Asset::query()
             ->where('package_ref', 'cloudflare')
             ->where('type', 'subdomain')
-            ->with(['opd:id,name,code', 'pic:id,name']);
+            ->with(['opd:id,name,code', 'penanggungJawab']);
 
         if ($this->search) {
             $q->where('identifier', 'like', '%' . $this->search . '%');

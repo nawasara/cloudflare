@@ -126,7 +126,7 @@
                                 @endphp
                                 <tr>
                                     <td class="px-5 py-3 font-medium text-gray-800 dark:text-neutral-200">{{ $domain->identifier }}</td>
-                                    <td class="px-5 py-3 text-gray-500 dark:text-neutral-400">{{ $domain->pic->name ?? '-' }}</td>
+                                    <td class="px-5 py-3 text-gray-500 dark:text-neutral-400">{{ $domain->penanggungJawab ? $domain->pjProfile()->name : '-' }}</td>
                                     <td class="px-5 py-3 text-right text-gray-800 dark:text-neutral-200 font-mono">{{ number_format($z['requests']) }}</td>
                                     <td class="px-5 py-3 text-right text-gray-800 dark:text-neutral-200 font-mono">{{ $this->formatBytes($z['bandwidth']) }}</td>
                                     <td class="px-5 py-3 text-right text-gray-800 dark:text-neutral-200 font-mono">{{ number_format($z['threats']) }}</td>

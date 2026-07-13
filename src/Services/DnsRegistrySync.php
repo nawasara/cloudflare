@@ -15,7 +15,8 @@ class DnsRegistrySync
 
     /**
      * Sync all DNS records of a zone into the registry as subdomain assets.
-     * New records inherit OPD/PIC from the parent zone asset if available.
+     * New records inherit OPD / penanggung jawab from the parent zone asset
+     * if available.
      */
     public function syncZone(string $zoneId): array
     {
@@ -38,7 +39,7 @@ class DnsRegistrySync
         $records = $this->cloudflare->getAllDnsRecords($zoneId);
         $stats['total'] = count($records);
 
-        [$defaultOpdId, $defaultPicId] = $this->parentDefaults($zoneId);
+        [$defaultOpdId, $defaultPjUserId] = $this->parentDefaults($zoneId);
 
         $seenRecordIds = [];
 
@@ -49,7 +50,7 @@ class DnsRegistrySync
             }
 
             $seenRecordIds[] = $record['id'] ?? null;
-            $outcome = $this->upsertRecord($record, $defaultOpdId, $defaultPicId);
+            $outcome = $this->upsertRecord($record, $defaultOpdId, $defaultPjUserId);
             $stats[$outcome]++;
         }
 
@@ -98,8 +99,8 @@ class DnsRegistrySync
             return null;
         }
 
-        [$defaultOpdId, $defaultPicId] = $this->parentDefaults($zoneId);
-        $this->upsertRecord($record, $defaultOpdId, $defaultPicId);
+        [$defaultOpdId, $defaultPjUserId] = $this->parentDefaults($zoneId);
+        $this->upsertRecord($record, $defaultOpdId, $defaultPjUserId);
 
         return Asset::where('package_ref', 'cloudflare')
             ->where('external_id', $record['id'] ?? null)
@@ -131,7 +132,7 @@ class DnsRegistrySync
     }
 
     /**
-     * @return array{0:?int,1:?int} [opd_id, pic_id] inherited from zone asset.
+     * @return array{0:?int,1:?int} [opd_id, pj_user_id] inherited from zone asset.
      */
     protected function parentDefaults(string $zoneId): array
     {
@@ -139,10 +140,10 @@ class DnsRegistrySync
             ->where('external_id', $zoneId)
             ->first();
 
-        return [$zoneAsset?->opd_id, $zoneAsset?->pic_id];
+        return [$zoneAsset?->opd_id, $zoneAsset?->pj_user_id];
     }
 
-    protected function upsertRecord(array $record, ?int $defaultOpdId, ?int $defaultPicId): string
+    protected function upsertRecord(array $record, ?int $defaultOpdId, ?int $defaultPjUserId): string
     {
         $recordId = $record['id'] ?? null;
         $identifier = $record['name'] ?? null;
@@ -177,7 +178,7 @@ class DnsRegistrySync
 
         Asset::create([
             'opd_id' => $defaultOpdId,
-            'pic_id' => $defaultPicId,
+            'pj_user_id' => $defaultPjUserId,
             'type' => 'subdomain',
             'identifier' => $identifier,
             'package_ref' => 'cloudflare',

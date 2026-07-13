@@ -37,18 +37,19 @@ class ZoneHealth extends Component
         $assets = Asset::where('package_ref', 'cloudflare')
             ->where('type', 'domain')
             ->whereNotNull('external_id')
-            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->with(['opd:id,name,code', 'penanggungJawab'])
             ->get()
             ->keyBy('external_id');
 
         foreach ($zones as $zone) {
             $health = $this->cloudflare->getZoneHealth($zone);
             $asset = $assets[$zone['id']] ?? null;
+            $pj = $asset?->pjProfile();
             $rows[] = [
                 'zone' => $zone,
                 'health' => $health,
                 'opd' => $asset?->opd,
-                'pic' => $asset?->pic,
+                'pj' => ($pj && $pj->found) ? $pj->name : null,
             ];
         }
 

@@ -190,8 +190,8 @@
                             @elseif ($asset && $asset->opd)
                                 <div class="flex flex-col">
                                     <span class="font-medium text-gray-800 dark:text-neutral-200">{{ $asset->opd->name }}</span>
-                                    @if ($asset->pic)
-                                        <span class="text-xs text-gray-500 dark:text-neutral-400">PIC: {{ $asset->pic->name }}</span>
+                                    @if ($asset->penanggungJawab)
+                                        <span class="text-xs text-gray-500 dark:text-neutral-400">PJ: {{ $asset->pjProfile()->name }}</span>
                                     @endif
                                 </div>
                             @elseif ($asset)
@@ -345,7 +345,7 @@
                         Kepemilikan (Registry)
                     </h4>
                     <p class="text-xs text-gray-500 dark:text-neutral-400 mb-3">
-                        Default mengikuti OPD/PIC zone induk. Ubah kalau record ini milik OPD berbeda.
+                        Default mengikuti OPD / penanggung jawab zone induk. Ubah kalau record ini milik OPD berbeda.
                     </p>
 
                     <div class="grid grid-cols-1 gap-4">
@@ -357,12 +357,9 @@
                         </x-nawasara-ui::form.select>
 
                         @if ($formOpdId)
-                            <x-nawasara-ui::form.select label="PIC (opsional)"
-                                wire:model="formPicId" placeholder="-- Pilih PIC --">
-                                @foreach ($this->picList as $pic)
-                                    <option value="{{ $pic->id }}">{{ $pic->name }}{{ $pic->position ? ' ('.$pic->position.')' : '' }}</option>
-                                @endforeach
-                            </x-nawasara-ui::form.select>
+                            <x-nawasara-ui::form.select label="Penanggung Jawab (opsional)"
+                                wire:model="formPjUserId" placeholder="-- Pilih Penanggung Jawab --"
+                                :options="$this->pjCandidates" />
                         @endif
                     </div>
                 </div>

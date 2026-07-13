@@ -77,8 +77,8 @@
                         @if ($row['opd'])
                             <div class="flex flex-col">
                                 <span class="text-gray-800 dark:text-neutral-200">{{ $row['opd']->name }}</span>
-                                @if ($row['pic'])
-                                    <span class="text-xs text-gray-500 dark:text-neutral-400">PIC: {{ $row['pic']->name }}</span>
+                                @if ($row['pj'])
+                                    <span class="text-xs text-gray-500 dark:text-neutral-400">PJ: {{ $row['pj'] }}</span>
                                 @endif
                             </div>
                         @else

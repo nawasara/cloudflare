@@ -62,7 +62,7 @@ class OpdRollup extends Component
             ->where('package_ref', 'cloudflare')
             ->where('type', 'domain')
             ->whereNotNull('external_id')
-            ->with('pic:id,name')
+            ->with('penanggungJawab')
             ->get();
     }
 

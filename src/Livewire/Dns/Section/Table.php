@@ -12,9 +12,10 @@ use Nawasara\Cloudflare\Models\CloudflareDnsRecord;
 use Nawasara\Cloudflare\Models\CloudflareZone;
 use Nawasara\Cloudflare\Repositories\CloudflareDnsRecordRepository;
 use Nawasara\Cloudflare\Services\DnsRegistrySync;
+use Nawasara\Keycloak\Support\KeycloakProfile;
 use Nawasara\Registry\Models\Asset;
+use Nawasara\Registry\Models\Membership;
 use Nawasara\Registry\Models\Opd;
-use Nawasara\Registry\Models\Pic;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 use Nawasara\Ui\Livewire\Concerns\HasExport;
 
@@ -50,7 +51,7 @@ class Table extends Component
     public string $formComment = '';
     public string $formTagsInput = ''; // comma-separated user input
     public $formOpdId = '';
-    public $formPicId = '';
+    public $formPjUserId = '';
 
     /**
      * Selected record ids for bulk actions. Toggling individual checkboxes
@@ -139,7 +140,7 @@ class Table extends Component
                 ->where('external_id', $this->zone)
                 ->first();
             $this->formOpdId = $zoneAsset?->opd_id ?: '';
-            $this->formPicId = $zoneAsset?->pic_id ?: '';
+            $this->formPjUserId = $zoneAsset?->pj_user_id ?: '';
         }
         $this->dispatch('modal-open:dns-form');
     }
@@ -165,14 +166,14 @@ class Table extends Component
             ->where('external_id', $record->record_id)
             ->first();
         $this->formOpdId = $asset?->opd_id ?: '';
-        $this->formPicId = $asset?->pic_id ?: '';
+        $this->formPjUserId = $asset?->pj_user_id ?: '';
 
         $this->dispatch('modal-open:dns-form');
     }
 
     public function updatedFormOpdId(): void
     {
-        $this->formPicId = '';
+        $this->formPjUserId = '';
     }
 
     #[Computed]
@@ -181,16 +182,24 @@ class Table extends Component
         return Opd::orderBy('name')->get(['id', 'name', 'code']);
     }
 
+    /**
+     * Kandidat penanggung jawab: user yang jadi member OPD terpilih.
+     * Map ke [user_id => nama] via profil Keycloak.
+     */
     #[Computed]
-    public function picList()
+    public function pjCandidates(): array
     {
         if (! $this->formOpdId) {
-            return collect();
+            return [];
         }
 
-        return Pic::where('opd_id', $this->formOpdId)
-            ->orderBy('name')
-            ->get(['id', 'name', 'position']);
+        return Membership::where('opd_id', $this->formOpdId)
+            ->where('aktif', true)
+            ->with('user')
+            ->get()
+            ->filter(fn ($m) => $m->user)
+            ->mapWithKeys(fn ($m) => [$m->user_id => KeycloakProfile::for($m->user)->name])
+            ->all();
     }
 
     protected function resetForm(): void
@@ -205,7 +214,7 @@ class Table extends Component
         $this->formComment = '';
         $this->formTagsInput = '';
         $this->formOpdId = '';
-        $this->formPicId = '';
+        $this->formPjUserId = '';
     }
 
     /**
@@ -286,7 +295,7 @@ class Table extends Component
 
         return Asset::where('package_ref', 'cloudflare')
             ->whereIn('external_id', $recordIds)
-            ->with(['opd:id,name,code', 'pic:id,name'])
+            ->with(['opd:id,name,code', 'penanggungJawab'])
             ->get()
             ->keyBy('external_id');
     }
@@ -354,8 +363,9 @@ class Table extends Component
 
     /**
      * All DNS records of the active zone, materialised as plain rows for the
-     * exporter. Includes Registry-linked OPD/PIC info because that is the most
-     * common reason to export (handover docs, audit, OPD reports). Order
+     * exporter. Includes Registry-linked OPD / penanggung jawab info because
+     * that is the most common reason to export (handover docs, audit, OPD
+     * reports). Order
      * follows table reading order to match what users see on screen.
      */
     protected function exportData(): iterable
@@ -372,12 +382,13 @@ class Table extends Component
         $assets = Asset::query()
             ->where('package_ref', 'cloudflare')
             ->whereIn('external_id', $records->pluck('record_id')->filter())
-            ->with(['opd:id,name,code', 'pic:id,name,position'])
+            ->with(['opd:id,name,code', 'penanggungJawab'])
             ->get()
             ->keyBy('external_id');
 
         return $records->map(function ($r) use ($assets) {
             $asset = $assets[$r->record_id] ?? null;
+            $pj = $asset?->pjProfile();
             return [
                 'Type' => $r->type,
                 'Name' => $r->name,
@@ -389,8 +400,9 @@ class Table extends Component
                 'Tags' => is_array($r->tags) ? implode(', ', $r->tags) : '',
                 'OPD' => $asset?->opd?->name ?? '',
                 'OPD Code' => $asset?->opd?->code ?? '',
-                'PIC' => $asset?->pic?->name ?? '',
-                'PIC Position' => $asset?->pic?->position ?? '',
+                'Penanggung Jawab' => ($pj && $pj->found) ? $pj->name : '',
+                'NIP' => ($pj && $pj->found) ? ($pj->nip ?? '') : '',
+                'WhatsApp' => ($pj && $pj->found) ? ($pj->whatsapp ?? '') : '',
                 'Created (Cloudflare)' => $r->cf_created_at?->format('Y-m-d H:i:s') ?? '',
                 'Modified (Cloudflare)' => $r->cf_modified_at?->format('Y-m-d H:i:s') ?? '',
                 'Sync Status' => $r->sync_status,

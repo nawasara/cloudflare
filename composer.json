@@ -1,6 +1,6 @@
 {
     "name": "nawasara/cloudflare",
-    "description": "Cloudflare management dashboard for Nawasara — DNS records, zones, firewall rules, page rules, SSL settings, and analytics, with DB-cached snapshots and queue-backed mutations.",
+    "description": "Cloudflare management dashboard for Nawasara \u2014 DNS records, zones, firewall rules, page rules, SSL settings, and analytics, with DB-cached snapshots and queue-backed mutations.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -35,6 +35,7 @@
         "illuminate/support": "^10.0|^12.0",
         "spatie/laravel-permission": "^6.0",
         "nawasara/ui": "*",
+        "nawasara/keycloak": "*",
         "nawasara/search": "*",
         "nawasara/sync": "*",
         "nawasara/vault": "*",

@@ -105,8 +105,8 @@
                         @if ($asset->opd)
                             <div class="flex flex-col">
                                 <span class="text-gray-800 dark:text-neutral-200">{{ $asset->opd->name }}</span>
-                                @if ($asset->pic)
-                                    <span class="text-xs text-gray-500 dark:text-neutral-400">PIC: {{ $asset->pic->name }}</span>
+                                @if ($asset->penanggungJawab)
+                                    <span class="text-xs text-gray-500 dark:text-neutral-400">PJ: {{ $asset->pjProfile()->name }}</span>
                                 @endif
                             </div>
                         @else

@@ -17,7 +17,7 @@ class ZoneRegistrySync
      *  1. If an asset is already linked via (package_ref=cloudflare, external_id=zoneId),
      *     only refresh its identifier and status.
      *  2. Else, if there is an existing unlinked domain asset with the same identifier,
-     *     attach package_ref + external_id to it (preserves manually set OPD/PIC).
+     *     attach package_ref + external_id to it (preserves manually set OPD / penanggung jawab).
      *  3. Else, create a new unassigned asset (opd_id = null) for manual assignment.
      */
     public function sync(): array
@@ -83,7 +83,7 @@ class ZoneRegistrySync
 
             Asset::create([
                 'opd_id' => null,
-                'pic_id' => null,
+                'pj_user_id' => null,
                 'type' => 'domain',
                 'identifier' => $zoneName,
                 'package_ref' => 'cloudflare',
