@@ -241,24 +241,50 @@ class CloudflareClient
      * List account-level IP Access Rules, optionally filtered by the rule
      * notes (used as a soft tag — e.g. find rules created by site-scanner).
      *
+     * Walks every page. A single-page fetch silently truncates once the
+     * account holds more rules than the page size, which makes callers
+     * conclude a rule is missing when it merely sits on a later page —
+     * exactly the false negative that made 53 live blocks look absent.
+     *
+     * $perPage is the page size (Cloudflare caps it at 1000), not a limit on
+     * the total returned.
+     *
      * Cloudflare docs:
      *   https://developers.cloudflare.com/api/operations/ip-access-rules-for-an-account-list-ip-access-rules
      */
     public function listIpAccessRules(?string $notesContains = null, int $perPage = 50): array
     {
         $creds = $this->credentials();
+        $perPage = max(1, min($perPage, 1000));
 
-        $params = [
-            'account.id' => $creds['account_id'],
-            'per_page' => $perPage,
-        ];
-        if ($notesContains !== null) {
-            $params['notes'] = $notesContains;
-        }
+        $all = [];
+        $page = 1;
 
-        $response = $this->api()->get('/user/firewall/access_rules/rules', $params);
+        do {
+            $params = [
+                'account.id' => $creds['account_id'],
+                'per_page' => $perPage,
+                'page' => $page,
+            ];
+            if ($notesContains !== null) {
+                $params['notes'] = $notesContains;
+            }
 
-        return $response->successful() ? $response->json('result', []) : [];
+            $response = $this->api()->get('/user/firewall/access_rules/rules', $params);
+            if (! $response->successful()) {
+                // Return what we have rather than an empty set — a partial
+                // list is still useful, and callers treat [] as "no rules".
+                break;
+            }
+
+            $batch = $response->json('result', []) ?: [];
+            $all = array_merge($all, $batch);
+
+            $totalPages = (int) $response->json('result_info.total_pages', 1);
+            $page++;
+        } while ($page <= $totalPages && $batch !== []);
+
+        return $all;
     }
 
     /**
