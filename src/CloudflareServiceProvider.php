@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare;
 
+use Nawasara\Cloudflare\Jobs\CheckSslExpiryJob;
 use Livewire\Livewire;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Str;
@@ -80,6 +81,21 @@ class CloudflareServiceProvider extends ServiceProvider
                     ->name('cloudflare:health-check-ssl')
                     ->dailyAt('02:00')
                     ->withoutOverlapping(60);
+
+                // Membaca hasil pemeriksaan di atas dan memberitakannya.
+                //
+                // Dijadwalkan SETELAH pemeriksaannya (02:00), bukan bersamaan:
+                // membaca angka yang belum diperbarui berarti memberitakan
+                // keadaan kemarin, dan pada hari sertifikat benar-benar habis
+                // itu selisih yang menentukan.
+                //
+                // ->timezone() wajib — app.timezone UTC, tanpa itu jadwal
+                // jam-dinding meleset tujuh jam.
+                $schedule->call(fn () => CheckSslExpiryJob::dispatch())
+                    ->name('cloudflare:check-ssl-expiry')
+                    ->dailyAt('03:00')
+                    ->timezone(config('nawasara-cloudflare.ssl_alerts.timezone', 'Asia/Jakarta'))
+                    ->withoutOverlapping(30);
             });
         }
     }
