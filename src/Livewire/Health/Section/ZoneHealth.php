@@ -3,8 +3,8 @@
 namespace Nawasara\Cloudflare\Livewire\Health\Section;
 
 use Illuminate\Support\Facades\Gate;
-use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Livewire\Component;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;

@@ -58,8 +58,11 @@ class CloudflareDnsRecord extends Model
 
     public function scopeSearch($query, ?string $term)
     {
-        if (! $term) return $query;
+        if (! $term) {
+            return $query;
+        }
         $term = '%'.$term.'%';
+
         return $query->where(function ($q) use ($term) {
             $q->where('name', 'like', $term)
                 ->orWhere('content', 'like', $term);
@@ -75,6 +78,7 @@ class CloudflareDnsRecord extends Model
         if ($type === null || $type === '' || (is_array($type) && empty($type))) {
             return $query;
         }
+
         return is_array($type)
             ? $query->whereIn('type', $type)
             : $query->where('type', $type);
@@ -82,7 +86,10 @@ class CloudflareDnsRecord extends Model
 
     public function scopeProxied($query, ?bool $proxied)
     {
-        if ($proxied === null) return $query;
+        if ($proxied === null) {
+            return $query;
+        }
+
         return $query->where('proxied', $proxied);
     }
 }

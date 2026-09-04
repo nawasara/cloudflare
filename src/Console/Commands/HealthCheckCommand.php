@@ -28,6 +28,7 @@ class HealthCheckCommand extends Command
 
         if ($stats['total'] === 0) {
             $this->info('Tidak ada record yang perlu di-check (semua masih segar).');
+
             return self::SUCCESS;
         }
 

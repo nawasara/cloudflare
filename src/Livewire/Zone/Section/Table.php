@@ -28,13 +28,18 @@ class Table extends Component
 
     // Detail modal
     public ?int $detailId = null;
+
     public ?string $detailSsl = null;
+
     public ?string $detailSecurityLevel = null;
 
     // Purge cache modal
     public string $purgeZoneId = '';
+
     public string $purgeZoneName = '';
+
     public string $purgeType = 'all';
+
     public string $purgeUrls = '';
 
     protected CloudflareClient $cloudflare;
@@ -46,10 +51,13 @@ class Table extends Component
 
     protected function repo(): CloudflareZoneRepository
     {
-        return new CloudflareZoneRepository();
+        return new CloudflareZoneRepository;
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     #[Computed]
     public function zones()
@@ -63,6 +71,7 @@ class Table extends Component
     public function lastSyncedAt(): ?string
     {
         $when = $this->repo()->lastSyncedAt();
+
         return $when ? $when->diffForHumans() : null;
     }
 
@@ -106,7 +115,9 @@ class Table extends Component
         Gate::authorize('cloudflare.ssl.manage');
 
         $zone = $this->detail;
-        if (! $zone) return;
+        if (! $zone) {
+            return;
+        }
 
         if ($this->cloudflare->setSslMode($zone->zone_id, $mode)) {
             $zone->update(['ssl_mode' => $mode]);
@@ -122,7 +133,9 @@ class Table extends Component
         Gate::authorize('cloudflare.ddos.manage');
 
         $zone = $this->detail;
-        if (! $zone) return;
+        if (! $zone) {
+            return;
+        }
 
         if ($this->cloudflare->setSecurityLevel($zone->zone_id, $level)) {
             $zone->update(['security_level' => $level]);
@@ -155,6 +168,7 @@ class Table extends Component
             $urls = array_filter(array_map('trim', explode("\n", $this->purgeUrls)));
             if (empty($urls)) {
                 $this->toastError('Masukkan minimal 1 URL');
+
                 return;
             }
             $success = $this->cloudflare->purgeUrls($this->purgeZoneId, $urls);
@@ -187,10 +201,18 @@ class Table extends Component
         unset($this->assetMap);
 
         $parts = [];
-        if ($stats['created']) $parts[] = "{$stats['created']} baru";
-        if ($stats['linked']) $parts[] = "{$stats['linked']} terhubung";
-        if ($stats['updated']) $parts[] = "{$stats['updated']} diperbarui";
-        if (! $parts) $parts[] = 'semua up-to-date';
+        if ($stats['created']) {
+            $parts[] = "{$stats['created']} baru";
+        }
+        if ($stats['linked']) {
+            $parts[] = "{$stats['linked']} terhubung";
+        }
+        if ($stats['updated']) {
+            $parts[] = "{$stats['updated']} diperbarui";
+        }
+        if (! $parts) {
+            $parts[] = 'semua up-to-date';
+        }
 
         $this->toastSuccess('Sync registry: '.implode(', ', $parts)." (dari {$stats['total']} zone)");
     }
@@ -223,6 +245,7 @@ class Table extends Component
             ->map(function (CloudflareZone $z) use ($assetMap) {
                 $asset = $assetMap[$z->zone_id] ?? null;
                 $pj = $asset?->pjProfile();
+
                 return [
                     'Domain' => $z->name,
                     'Zone ID' => $z->zone_id,

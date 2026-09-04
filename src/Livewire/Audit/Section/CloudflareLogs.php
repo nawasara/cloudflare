@@ -2,9 +2,9 @@
 
 namespace Nawasara\Cloudflare\Livewire\Audit\Section;
 
-use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 
 class CloudflareLogs extends Component
@@ -43,8 +43,8 @@ class CloudflareLogs extends Component
         $params = [
             'page' => $this->page,
             'per_page' => 25,
-            'since' => $this->since . 'T00:00:00Z',
-            'before' => $this->before . 'T23:59:59Z',
+            'since' => $this->since.'T00:00:00Z',
+            'before' => $this->before.'T23:59:59Z',
         ];
 
         if ($this->actor) {

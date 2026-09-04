@@ -19,9 +19,7 @@ class CloudflareDnsRecordRepository implements SyncedRepository
 {
     use TracksLastSync;
 
-    public function __construct(public ?string $zoneId = null)
-    {
-    }
+    public function __construct(public ?string $zoneId = null) {}
 
     public function forZone(?string $zoneId): static
     {
@@ -38,6 +36,7 @@ class CloudflareDnsRecordRepository implements SyncedRepository
         if (is_numeric($id)) {
             return CloudflareDnsRecord::find($id);
         }
+
         return CloudflareDnsRecord::where('record_id', $id)->first();
     }
 

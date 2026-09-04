@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Jobs;
 
+use Carbon\Carbon;
 use Nawasara\Cloudflare\Models\CloudflareDnsRecord;
 use Nawasara\Cloudflare\Models\CloudflareZone;
 use Nawasara\Cloudflare\Services\CloudflareClient;
@@ -58,7 +59,9 @@ class SyncCloudflareDnsRecordsJob extends AbstractSyncJob
 
         foreach ($zoneIds as $zoneId) {
             $zone = CloudflareZone::where('zone_id', $zoneId)->first();
-            if (! $zone) continue;
+            if (! $zone) {
+                continue;
+            }
 
             $records = $cf->getAllDnsRecords($zoneId);
             $stats['zones_processed']++;
@@ -68,7 +71,9 @@ class SyncCloudflareDnsRecordsJob extends AbstractSyncJob
 
             foreach ($records as $row) {
                 $recordId = $row['id'] ?? null;
-                if (! $recordId) continue;
+                if (! $recordId) {
+                    continue;
+                }
 
                 $seenRecordIds[] = $recordId;
 
@@ -84,8 +89,8 @@ class SyncCloudflareDnsRecordsJob extends AbstractSyncJob
                     'priority' => $row['priority'] ?? null,
                     'comment' => $row['comment'] ?? null,
                     'tags' => $row['tags'] ?? null,
-                    'cf_created_at' => isset($row['created_on']) ? \Carbon\Carbon::parse($row['created_on']) : null,
-                    'cf_modified_at' => isset($row['modified_on']) ? \Carbon\Carbon::parse($row['modified_on']) : null,
+                    'cf_created_at' => isset($row['created_on']) ? Carbon::parse($row['created_on']) : null,
+                    'cf_modified_at' => isset($row['modified_on']) ? Carbon::parse($row['modified_on']) : null,
                     'sync_status' => CloudflareDnsRecord::SYNC_SYNCED,
                     'sync_error' => null,
                     'last_synced_at' => now(),
@@ -99,6 +104,7 @@ class SyncCloudflareDnsRecordsJob extends AbstractSyncJob
 
                     if ($existing->content_hash === $newHash && $existing->isSynced()) {
                         $stats['unchanged']++;
+
                         continue;
                     }
 

@@ -2,8 +2,8 @@
 
 namespace Nawasara\Cloudflare\Livewire\Analytics;
 
-use Livewire\Component;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 
 class Index extends Component
 {

@@ -2,9 +2,9 @@
 
 namespace Nawasara\Cloudflare\Livewire\Analytics\Section;
 
-use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Registry\Models\Asset;
 use Nawasara\Registry\Models\Opd;
@@ -46,7 +46,7 @@ class OpdRollup extends Component
     public function opdOptions(): array
     {
         return $this->opdList
-            ->mapWithKeys(fn ($o) => [(string) $o->id => $o->code . ' - ' . $o->name])
+            ->mapWithKeys(fn ($o) => [(string) $o->id => $o->code.' - '.$o->name])
             ->all();
     }
 
@@ -97,10 +97,17 @@ class OpdRollup extends Component
 
     protected function formatBytes(int $bytes): string
     {
-        if ($bytes >= 1073741824) return number_format($bytes / 1073741824, 2) . ' GB';
-        if ($bytes >= 1048576) return number_format($bytes / 1048576, 2) . ' MB';
-        if ($bytes >= 1024) return number_format($bytes / 1024, 2) . ' KB';
-        return $bytes . ' B';
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2).' GB';
+        }
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2).' MB';
+        }
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2).' KB';
+        }
+
+        return $bytes.' B';
     }
 
     public function render()

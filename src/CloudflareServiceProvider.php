@@ -2,15 +2,22 @@
 
 namespace Nawasara\Cloudflare;
 
-use Nawasara\Cloudflare\Jobs\CheckSslExpiryJob;
-use Livewire\Livewire;
 use Illuminate\Console\Scheduling\Schedule;
-use Illuminate\Support\Str;
-use Symfony\Component\Finder\Finder;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Nawasara\Cloudflare\Console\Commands\HealthCheckCommand;
 use Nawasara\Cloudflare\Console\Commands\SyncRegistryCommand;
+use Nawasara\Cloudflare\Jobs\CheckSslExpiryJob;
+use Nawasara\Cloudflare\Jobs\DetectAttackJob;
+use Nawasara\Cloudflare\Jobs\SyncCloudflareDnsRecordsJob;
+use Nawasara\Cloudflare\Jobs\SyncCloudflareZonesJob;
+use Nawasara\Cloudflare\Models\AttackWindow;
 use Nawasara\Cloudflare\Services\CloudflareClient;
+use Nawasara\Cloudflare\Services\DnsHealthChecker;
+use Nawasara\Cloudflare\Services\DnsRegistrySync;
+use Nawasara\Cloudflare\Services\ZoneRegistrySync;
+use Symfony\Component\Finder\Finder;
 
 class CloudflareServiceProvider extends ServiceProvider
 {
@@ -46,8 +53,8 @@ class CloudflareServiceProvider extends ServiceProvider
                 // so "Last sync" sat a week stale. Dispatch zones first, then
                 // DNS (the DNS job reads the zones table).
                 $schedule->call(function () {
-                    \Nawasara\Cloudflare\Jobs\SyncCloudflareZonesJob::dispatch(triggerSource: 'scheduled');
-                    \Nawasara\Cloudflare\Jobs\SyncCloudflareDnsRecordsJob::dispatch(triggerSource: 'scheduled');
+                    SyncCloudflareZonesJob::dispatch(triggerSource: 'scheduled');
+                    SyncCloudflareDnsRecordsJob::dispatch(triggerSource: 'scheduled');
                 })
                     ->name('cloudflare:sync-api')
                     ->everyThirtyMinutes()
@@ -56,8 +63,8 @@ class CloudflareServiceProvider extends ServiceProvider
                 // Detect new/changed/deleted CF records and surface them in the registry.
                 $schedule->call(function () {
                     $cf = $this->app->make(CloudflareClient::class);
-                    $this->app->make(\Nawasara\Cloudflare\Services\ZoneRegistrySync::class)->sync();
-                    $dnsSync = $this->app->make(\Nawasara\Cloudflare\Services\DnsRegistrySync::class);
+                    $this->app->make(ZoneRegistrySync::class)->sync();
+                    $dnsSync = $this->app->make(DnsRegistrySync::class);
                     foreach ($cf->getCachedZones() as $zone) {
                         $dnsSync->syncZone($zone['id']);
                     }
@@ -67,7 +74,7 @@ class CloudflareServiceProvider extends ServiceProvider
                     ->withoutOverlapping(25);
 
                 $schedule->call(function () {
-                    $this->app->make(\Nawasara\Cloudflare\Services\DnsHealthChecker::class)
+                    $this->app->make(DnsHealthChecker::class)
                         ->runHealthCheck(withSsl: false, chunk: 50, limit: null, staleMinutes: 10);
                 })
                     ->name('cloudflare:health-check')
@@ -75,7 +82,7 @@ class CloudflareServiceProvider extends ServiceProvider
                     ->withoutOverlapping(20);
 
                 $schedule->call(function () {
-                    $this->app->make(\Nawasara\Cloudflare\Services\DnsHealthChecker::class)
+                    $this->app->make(DnsHealthChecker::class)
                         ->runHealthCheck(withSsl: true, chunk: 50, limit: null, staleMinutes: 1380);
                 })
                     ->name('cloudflare:health-check-ssl')
@@ -91,6 +98,29 @@ class CloudflareServiceProvider extends ServiceProvider
                 //
                 // ->timezone() wajib — app.timezone UTC, tanpa itu jadwal
                 // jam-dinding meleset tujuh jam.
+                // Deteksi serangan yang SEDANG berlangsung.
+                //
+                // Tiap 2 menit — inilah yang menjawab "apakah sekarang ada
+                // situs yang dihantam". Sisa jadwal di paket ini bersifat
+                // laporan; yang satu ini bersifat panggilan.
+                $schedule->call(fn () => DetectAttackJob::dispatch())
+                    ->name('cloudflare:detect-attack')
+                    ->everyTwoMinutes()
+                    ->withoutOverlapping(5);
+
+                // Membuang cuplikan lama. Ia hanya pembanding, dan tanpa
+                // pembersihan ia tumbuh selamanya — kesalahan yang sudah
+                // membuat satu tabel di sistem ini mencapai 458 MB.
+                $schedule->call(function () {
+                    AttackWindow::where(
+                        'window_start', '<',
+                        now()->subDays((int) config('nawasara-cloudflare.attack_detection.retention_days', 30)),
+                    )->delete();
+                })
+                    ->name('cloudflare:prune-attack-windows')
+                    ->dailyAt('04:00')
+                    ->withoutOverlapping(30);
+
                 $schedule->call(fn () => CheckSslExpiryJob::dispatch())
                     ->name('cloudflare:check-ssl-expiry')
                     ->dailyAt('03:00')
@@ -104,7 +134,7 @@ class CloudflareServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/nawasara-cloudflare.php', 'nawasara-cloudflare');
 
-        $this->app->singleton(CloudflareClient::class, fn () => new CloudflareClient());
+        $this->app->singleton(CloudflareClient::class, fn () => new CloudflareClient);
     }
 
     public function registerLivewire(): void
@@ -116,7 +146,7 @@ class CloudflareServiceProvider extends ServiceProvider
             return;
         }
 
-        $finder = new Finder();
+        $finder = new Finder;
         $finder->files()->in($basePath)->name('*.php');
 
         foreach ($finder as $file) {

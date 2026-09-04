@@ -46,6 +46,7 @@ class EndpointHealth extends Model
         if ($state) {
             $query->where('state', $state);
         }
+
         return $query;
     }
 }

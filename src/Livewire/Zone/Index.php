@@ -15,7 +15,7 @@ class Index extends Component
     #[Computed]
     public function stats(): array
     {
-        $s = (new CloudflareZoneRepository())->stats();
+        $s = (new CloudflareZoneRepository)->stats();
 
         // SSL coverage % — relevan ke total zone, bukan active (zone non-active
         // tetap punya konfigurasi SSL).

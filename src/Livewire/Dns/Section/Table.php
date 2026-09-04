@@ -38,19 +38,30 @@ class Table extends Component
     public array $typeFilter = [];
 
     public string $sort = 'newest'; // newest | oldest | modified | name
+
     public int $perPage = 25;
 
     // Form modal
     public ?int $editingId = null;
+
     public string $formType = 'A';
+
     public string $formName = '';
+
     public string $formContent = '';
+
     public int $formTtl = 1;
+
     public bool $formProxied = true;
+
     public int $formPriority = 10;
+
     public string $formComment = '';
+
     public string $formTagsInput = ''; // comma-separated user input
+
     public $formOpdId = '';
+
     public $formPjUserId = '';
 
     /**
@@ -102,13 +113,33 @@ class Table extends Component
     public function lastSyncedAt(): ?string
     {
         $when = $this->repo()->lastSyncedAt();
+
         return $when ? $when->diffForHumans() : null;
     }
 
-    public function updatedZone(): void { $this->resetPage(); $this->resetSelection(); }
-    public function updatedSearch(): void { $this->resetPage(); $this->resetSelection(); }
-    public function updatedTypeFilter(): void { $this->resetPage(); $this->resetSelection(); }
-    public function updatedSort(): void { $this->resetPage(); $this->resetSelection(); }
+    public function updatedZone(): void
+    {
+        $this->resetPage();
+        $this->resetSelection();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+        $this->resetSelection();
+    }
+
+    public function updatedTypeFilter(): void
+    {
+        $this->resetPage();
+        $this->resetSelection();
+    }
+
+    public function updatedSort(): void
+    {
+        $this->resetPage();
+        $this->resetSelection();
+    }
 
     /**
      * Reset selection from server-side flows (filter changes, post-action
@@ -150,7 +181,9 @@ class Table extends Component
         Gate::authorize('cloudflare.dns.edit');
 
         $record = CloudflareDnsRecord::find($id);
-        if (! $record) return;
+        if (! $record) {
+            return;
+        }
 
         $this->editingId = $id;
         $this->formType = $record->type;
@@ -232,6 +265,7 @@ class Table extends Component
                 $tags[] = $t;
             }
         }
+
         return array_values(array_unique($tags));
     }
 
@@ -306,6 +340,7 @@ class Table extends Component
 
         if (! $this->zone) {
             $this->toastError('Pilih zone terlebih dahulu');
+
             return;
         }
 
@@ -313,10 +348,18 @@ class Table extends Component
         unset($this->assetMap);
 
         $parts = [];
-        if ($stats['created']) $parts[] = "{$stats['created']} baru";
-        if ($stats['linked']) $parts[] = "{$stats['linked']} terhubung";
-        if ($stats['updated']) $parts[] = "{$stats['updated']} diperbarui";
-        if (! $parts) $parts[] = 'semua up-to-date';
+        if ($stats['created']) {
+            $parts[] = "{$stats['created']} baru";
+        }
+        if ($stats['linked']) {
+            $parts[] = "{$stats['linked']} terhubung";
+        }
+        if ($stats['updated']) {
+            $parts[] = "{$stats['updated']} diperbarui";
+        }
+        if (! $parts) {
+            $parts[] = 'semua up-to-date';
+        }
 
         $this->toastSuccess('Sync DNS: '.implode(', ', $parts)." (dari {$stats['total']} record)");
     }
@@ -329,6 +372,7 @@ class Table extends Component
 
         if (empty($this->selected)) {
             $this->toastError('Tidak ada record yang dipilih.');
+
             return;
         }
 
@@ -358,6 +402,7 @@ class Table extends Component
         $zoneSlug = $this->zone
             ? str_replace('.', '-', strtolower($this->zone))
             : 'all-zones';
+
         return "dns-records-{$zoneSlug}";
     }
 
@@ -389,6 +434,7 @@ class Table extends Component
         return $records->map(function ($r) use ($assets) {
             $asset = $assets[$r->record_id] ?? null;
             $pj = $asset?->pjProfile();
+
             return [
                 'Type' => $r->type,
                 'Name' => $r->name,

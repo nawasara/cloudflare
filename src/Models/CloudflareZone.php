@@ -59,8 +59,11 @@ class CloudflareZone extends Model
 
     public function scopeSearch($query, ?string $term)
     {
-        if (! $term) return $query;
+        if (! $term) {
+            return $query;
+        }
         $term = '%'.$term.'%';
+
         return $query->where('name', 'like', $term);
     }
 

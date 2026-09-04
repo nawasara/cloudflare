@@ -48,7 +48,7 @@ class SyncRegistryCommand extends Command
 
         if (! $zonesOnly) {
             $zones = $cloudflare->getCachedZones();
-            $this->info("\nSyncing DNS records for " . count($zones) . " zone(s)...");
+            $this->info("\nSyncing DNS records for ".count($zones).' zone(s)...');
 
             $totals = ['total' => 0, 'created' => 0, 'linked' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0, 'deactivated' => 0];
 
@@ -59,9 +59,13 @@ class SyncRegistryCommand extends Command
                 }
                 if ($stats['created'] > 0 || $stats['deactivated'] > 0) {
                     $delta = [];
-                    if ($stats['created'] > 0) $delta[] = "+{$stats['created']}";
-                    if ($stats['deactivated'] > 0) $delta[] = "-{$stats['deactivated']}";
-                    $this->line("  {$zone['name']}: " . implode(' ', $delta));
+                    if ($stats['created'] > 0) {
+                        $delta[] = "+{$stats['created']}";
+                    }
+                    if ($stats['deactivated'] > 0) {
+                        $delta[] = "-{$stats['deactivated']}";
+                    }
+                    $this->line("  {$zone['name']}: ".implode(' ', $delta));
                 }
             }
 
@@ -87,6 +91,7 @@ class SyncRegistryCommand extends Command
         }
 
         $this->info("\nDone.");
+
         return self::SUCCESS;
     }
 }

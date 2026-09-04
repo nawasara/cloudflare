@@ -3,10 +3,10 @@
 namespace Nawasara\Cloudflare\Livewire\Firewall\Section;
 
 use Illuminate\Support\Facades\Gate;
-use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
@@ -19,9 +19,13 @@ class Table extends Component
 
     // Form modal
     public ?string $editingId = null;
+
     public string $formDescription = '';
+
     public string $formExpression = '';
+
     public string $formAction = 'block';
+
     public bool $formPaused = false;
 
     protected CloudflareClient $cloudflare;

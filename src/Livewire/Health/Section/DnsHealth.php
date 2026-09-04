@@ -3,10 +3,10 @@
 namespace Nawasara\Cloudflare\Livewire\Health\Section;
 
 use Illuminate\Support\Facades\Gate;
-use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
+use Livewire\Component;
+use Livewire\WithPagination;
 use Nawasara\Cloudflare\Models\EndpointHealth;
 use Nawasara\Cloudflare\Services\DnsHealthChecker;
 use Nawasara\Registry\Models\Asset;
@@ -27,9 +27,20 @@ class DnsHealth extends Component
     #[Url(except: '')]
     public string $stateFilter = '';
 
-    public function updatedSearch() { $this->resetPage(); }
-    public function updatedOpdFilter() { $this->resetPage(); }
-    public function updatedStateFilter() { $this->resetPage(); }
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedOpdFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStateFilter()
+    {
+        $this->resetPage();
+    }
 
     #[Computed]
     public function opdList()
@@ -47,7 +58,7 @@ class DnsHealth extends Component
     {
         return collect(['all' => 'Semua OPD'])
             ->merge(
-                $this->opdList->mapWithKeys(fn ($o) => [(string) $o->id => $o->code . ' - ' . $o->name])
+                $this->opdList->mapWithKeys(fn ($o) => [(string) $o->id => $o->code.' - '.$o->name])
             )
             ->all();
     }
@@ -61,7 +72,7 @@ class DnsHealth extends Component
             ->with(['opd:id,name,code', 'penanggungJawab']);
 
         if ($this->search) {
-            $q->where('identifier', 'like', '%' . $this->search . '%');
+            $q->where('identifier', 'like', '%'.$this->search.'%');
         }
         if ($this->opdFilter) {
             $q->where('opd_id', $this->opdFilter);
@@ -133,7 +144,9 @@ class DnsHealth extends Component
         Gate::authorize('cloudflare.health.view');
 
         $asset = Asset::find($assetId);
-        if (! $asset) return;
+        if (! $asset) {
+            return;
+        }
 
         app(DnsHealthChecker::class)->checkOne($asset->identifier, true);
         unset($this->rows, $this->summary);
@@ -147,6 +160,7 @@ class DnsHealth extends Component
         $ids = $this->items->pluck('identifier')->all();
         if (empty($ids)) {
             $this->toastError('Tidak ada record untuk dicek');
+
             return;
         }
 
@@ -155,7 +169,7 @@ class DnsHealth extends Component
         $elapsed = round(microtime(true) - $start, 1);
 
         unset($this->rows, $this->summary);
-        $this->toastSuccess(count($ids) . " record dicek dalam {$elapsed}s (HTTP only)");
+        $this->toastSuccess(count($ids)." record dicek dalam {$elapsed}s (HTTP only)");
     }
 
     public function setStateFilter(string $state)

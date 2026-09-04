@@ -3,10 +3,10 @@
 namespace Nawasara\Cloudflare\Livewire\PageRule\Section;
 
 use Illuminate\Support\Facades\Gate;
-use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 
@@ -51,11 +51,17 @@ class Table extends Component
 
     // Form modal
     public ?string $editingId = null;
+
     public string $formTarget = '';
+
     public string $formActionType = 'always_use_https';
+
     public string $formActionValue = '';
+
     public int $formForwardingStatus = 301;
+
     public int $formPriority = 1;
+
     public string $formStatus = 'active';
 
     protected CloudflareClient $cloudflare;
@@ -154,6 +160,7 @@ class Table extends Component
         $action = $this->buildAction();
         if ($action === null) {
             $this->toastError('Action value tidak valid');
+
             return;
         }
 

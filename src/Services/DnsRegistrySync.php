@@ -9,9 +9,7 @@ class DnsRegistrySync
     /** Record types that represent actual endpoints worth tracking as subdomain assets. */
     public const TRACKED_TYPES = ['A', 'AAAA', 'CNAME'];
 
-    public function __construct(protected CloudflareClient $cloudflare)
-    {
-    }
+    public function __construct(protected CloudflareClient $cloudflare) {}
 
     /**
      * Sync all DNS records of a zone into the registry as subdomain assets.
@@ -46,6 +44,7 @@ class DnsRegistrySync
         foreach ($records as $record) {
             if (! $this->isTrackable($record, $zoneName)) {
                 $stats['skipped']++;
+
                 continue;
             }
 
@@ -75,7 +74,7 @@ class DnsRegistrySync
             ->where('type', 'subdomain')
             ->where('status', 'active')
             ->whereNotNull('external_id')
-            ->where('identifier', 'like', '%.' . $zoneName);
+            ->where('identifier', 'like', '%.'.$zoneName);
 
         if (! empty($seenRecordIds)) {
             $query->whereNotIn('external_id', $seenRecordIds);
@@ -158,8 +157,10 @@ class DnsRegistrySync
         if ($asset) {
             if ($asset->identifier !== $identifier) {
                 $asset->update(['identifier' => $identifier]);
+
                 return 'updated';
             }
+
             return 'unchanged';
         }
 
@@ -173,6 +174,7 @@ class DnsRegistrySync
                 'package_ref' => 'cloudflare',
                 'external_id' => $recordId,
             ]);
+
             return 'linked';
         }
 

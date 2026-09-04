@@ -6,9 +6,7 @@ use Nawasara\Registry\Models\Asset;
 
 class ZoneRegistrySync
 {
-    public function __construct(protected CloudflareClient $cloudflare)
-    {
-    }
+    public function __construct(protected CloudflareClient $cloudflare) {}
 
     /**
      * Sync Cloudflare zones into the registry as domain assets.
@@ -64,6 +62,7 @@ class ZoneRegistrySync
                 } else {
                     $stats['unchanged']++;
                 }
+
                 continue;
             }
 
@@ -78,6 +77,7 @@ class ZoneRegistrySync
                     'external_id' => $zoneId,
                 ]);
                 $stats['linked']++;
+
                 continue;
             }
 

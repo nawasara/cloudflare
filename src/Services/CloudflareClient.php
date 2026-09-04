@@ -3,13 +3,15 @@
 namespace Nawasara\Cloudflare\Services;
 
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Nawasara\Vault\Facades\Vault;
 
 class CloudflareClient
 {
     protected ?string $apiToken = null;
+
     protected ?string $accountId = null;
 
     protected function credentials(): array
@@ -51,6 +53,7 @@ class CloudflareClient
 
             if ($response->successful() && $response->json('success')) {
                 $status = $response->json('result.status', 'active');
+
                 return [
                     'success' => true,
                     'message' => "Token valid (status: {$status})",
@@ -59,6 +62,7 @@ class CloudflareClient
 
             $errors = $response->json('errors', []);
             $msg = $errors[0]['message'] ?? 'HTTP '.$response->status();
+
             return ['success' => false, 'message' => 'Gagal: '.$msg];
         } catch (\Throwable $e) {
             return ['success' => false, 'message' => 'Error: '.$e->getMessage()];
@@ -290,11 +294,11 @@ class CloudflareClient
     /**
      * Create an account-level IP Access Rule.
      *
-     * @param  string  $mode    'whitelist' | 'block' | 'challenge' | 'js_challenge' | 'managed_challenge'
+     * @param  string  $mode  'whitelist' | 'block' | 'challenge' | 'js_challenge' | 'managed_challenge'
      * @param  string  $target  'ip' | 'ip6' | 'ip_range' | 'asn' | 'country'
-     * @param  string  $value   The IP, CIDR, ASN, or 2-letter country code
+     * @param  string  $value  The IP, CIDR, ASN, or 2-letter country code
      * @param  string|null  $notes  Optional tag — store identifier here for later cleanup
-     * @return array|null  The created rule's payload, or null on failure
+     * @return array|null The created rule's payload, or null on failure
      */
     public function createIpAccessRule(
         string $mode,
@@ -327,7 +331,7 @@ class CloudflareClient
      * The legacy REST endpoint (/zones/{id}/analytics/dashboard) is deprecated
      * and returns empty data on most plans.
      *
-     * @param string $since Period in minutes (negative, e.g. "-1440" = last 24h)
+     * @param  string  $since  Period in minutes (negative, e.g. "-1440" = last 24h)
      */
     public function getAnalytics(string $zoneId, string $since = '-1440'): array
     {
@@ -392,7 +396,7 @@ class CloudflareClient
         ]);
 
         if (! $response->successful()) {
-            return $this->emptyAnalytics('Cloudflare API error: HTTP ' . $response->status());
+            return $this->emptyAnalytics('Cloudflare API error: HTTP '.$response->status());
         }
 
         $body = $response->json();
@@ -532,12 +536,13 @@ class CloudflareClient
         ]);
 
         if (! $response->successful()) {
-            return $this->emptyAggregated('Cloudflare API error: HTTP ' . $response->status());
+            return $this->emptyAggregated('Cloudflare API error: HTTP '.$response->status());
         }
 
         $body = $response->json();
         if (! empty($body['errors'])) {
             $messages = collect($body['errors'])->pluck('message')->filter()->implode('; ');
+
             return $this->emptyAggregated($messages ?: 'Unknown GraphQL error');
         }
 
@@ -559,7 +564,12 @@ class CloudflareClient
                 continue;
             }
 
-            $zReq = 0; $zCachedReq = 0; $zBytes = 0; $zCachedBytes = 0; $zThreats = 0; $zUniques = 0;
+            $zReq = 0;
+            $zCachedReq = 0;
+            $zBytes = 0;
+            $zCachedBytes = 0;
+            $zThreats = 0;
+            $zUniques = 0;
 
             foreach ($zone['series'] ?? [] as $group) {
                 $sum = $group['sum'] ?? [];
@@ -572,12 +582,16 @@ class CloudflareClient
 
                 foreach ($sum['responseStatusMap'] ?? [] as $row) {
                     $code = (string) ($row['edgeResponseStatus'] ?? '');
-                    if ($code === '') continue;
+                    if ($code === '') {
+                        continue;
+                    }
                     $statusMap[$code] = ($statusMap[$code] ?? 0) + (int) ($row['requests'] ?? 0);
                 }
                 foreach ($sum['countryMap'] ?? [] as $row) {
                     $country = (string) ($row['clientCountryName'] ?? '');
-                    if ($country === '') continue;
+                    if ($country === '') {
+                        continue;
+                    }
                     $countryMap[$country] = ($countryMap[$country] ?? 0) + (int) ($row['requests'] ?? 0);
                 }
             }
@@ -737,10 +751,11 @@ class CloudflareClient
         }
 
         if (! $response->successful()) {
-            $msg = $response->json('errors.0.message') ?? ('HTTP ' . $response->status());
+            $msg = $response->json('errors.0.message') ?? ('HTTP '.$response->status());
             if ($response->status() === 403 || $response->status() === 401) {
                 $msg = 'API Token tidak bisa akses audit log. Endpoint ini membutuhkan Global API Key (legacy auth) atau role super-administrator pada account.';
             }
+
             return $this->emptyAuditLogs($msg);
         }
 
@@ -785,7 +800,7 @@ class CloudflareClient
             return ['ok' => true, 'data' => $response->json('result') ?? [], 'error' => null];
         }
 
-        $error = $response->json('errors.0.message') ?? ('HTTP ' . $response->status());
+        $error = $response->json('errors.0.message') ?? ('HTTP '.$response->status());
         if ($response->status() === 403) {
             $error = 'Token tidak punya permission "SSL and Certificates:Read"';
         }
@@ -855,7 +870,7 @@ class CloudflareClient
                     'label' => 'Certificate Expiry',
                     'value' => match (true) {
                         ! $packsResult['ok'] => 'tidak bisa dicek',
-                        $daysToExpiry !== null => $daysToExpiry . ' hari',
+                        $daysToExpiry !== null => $daysToExpiry.' hari',
                         default => 'no active cert',
                     },
                     'days' => $daysToExpiry,
@@ -930,5 +945,75 @@ class CloudflareClient
         return $this->api()->post("/zones/{$zoneId}/purge_cache", [
             'files' => $urls,
         ])->successful();
+    }
+
+    /**
+     * Kejadian WAF per HOST pada jendela waktu tertentu.
+     *
+     * Berbeda dari [getAnalytics] yang memberi agregat per jam untuk seluruh
+     * zona: ini memecahnya per host dan per aksi, sehingga dapat menjawab
+     * "situs MANA yang sedang dihantam" — bukan sekadar "ada serangan".
+     *
+     * ⚠️ Cloudflare menolak rentang lebih dari 24 jam pada dataset ini
+     * (diuji: 3 hari → "cannot request a time range wider than 1d"). Karena
+     * itu pembanding minggu lalu harus disimpan sendiri, tidak bisa ditanya
+     * ulang ke sini.
+     *
+     * @return array<int,array{host:string,action:string,country:?string,count:int}>
+     */
+    public function getFirewallEvents(string $zoneId, \DateTimeInterface $since, \DateTimeInterface $until, int $limit = 200): array
+    {
+        $query = <<<'GQL'
+        query($zoneTag: String!, $since: Time!, $until: Time!, $limit: Int!) {
+          viewer {
+            zones(filter: {zoneTag: $zoneTag}) {
+              firewallEventsAdaptiveGroups(
+                limit: $limit
+                filter: {datetime_geq: $since, datetime_leq: $until}
+                orderBy: [count_DESC]
+              ) {
+                count
+                dimensions {
+                  action
+                  clientCountryName
+                  clientRequestHTTPHost
+                }
+              }
+            }
+          }
+        }
+        GQL;
+
+        $response = $this->api()->post('/graphql', [
+            'query' => $query,
+            'variables' => [
+                'zoneTag' => $zoneId,
+                'since' => $since->format(\DateTimeInterface::ATOM),
+                'until' => $until->format(\DateTimeInterface::ATOM),
+                'limit' => $limit,
+            ],
+        ]);
+
+        if (! $response->successful()) {
+            return [];
+        }
+
+        $body = $response->json();
+
+        if (! empty($body['errors'])) {
+            Log::warning('[cloudflare] firewall events: '
+                .collect($body['errors'])->pluck('message')->implode('; '));
+
+            return [];
+        }
+
+        $groups = $body['data']['viewer']['zones'][0]['firewallEventsAdaptiveGroups'] ?? [];
+
+        return collect($groups)->map(fn (array $g) => [
+            'host' => $g['dimensions']['clientRequestHTTPHost'] ?? '(tanpa host)',
+            'action' => $g['dimensions']['action'] ?? 'unknown',
+            'country' => $g['dimensions']['clientCountryName'] ?? null,
+            'count' => (int) $g['count'],
+        ])->all();
     }
 }

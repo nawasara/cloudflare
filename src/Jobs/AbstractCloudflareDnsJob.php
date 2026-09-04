@@ -33,7 +33,10 @@ abstract class AbstractCloudflareDnsJob extends AbstractSyncJob
     protected function record(): ?CloudflareDnsRecord
     {
         $recordId = $this->payload['record_id'] ?? null;
-        if (! $recordId) return null;
+        if (! $recordId) {
+            return null;
+        }
+
         return CloudflareDnsRecord::where('record_id', $recordId)->first();
     }
 

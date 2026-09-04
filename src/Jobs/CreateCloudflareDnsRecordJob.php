@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Jobs;
 
+use Carbon\Carbon;
 use Nawasara\Cloudflare\Models\CloudflareDnsRecord;
 use Nawasara\Cloudflare\Models\CloudflareZone;
 
@@ -64,8 +65,8 @@ class CreateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
             'priority' => $result['priority'] ?? null,
             'comment' => $result['comment'] ?? null,
             'tags' => $result['tags'] ?? [],
-            'cf_created_at' => isset($result['created_on']) ? \Carbon\Carbon::parse($result['created_on']) : now(),
-            'cf_modified_at' => isset($result['modified_on']) ? \Carbon\Carbon::parse($result['modified_on']) : now(),
+            'cf_created_at' => isset($result['created_on']) ? Carbon::parse($result['created_on']) : now(),
+            'cf_modified_at' => isset($result['modified_on']) ? Carbon::parse($result['modified_on']) : now(),
         ];
 
         $record = CloudflareDnsRecord::create($attrs);

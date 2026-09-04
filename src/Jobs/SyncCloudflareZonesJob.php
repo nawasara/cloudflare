@@ -2,6 +2,7 @@
 
 namespace Nawasara\Cloudflare\Jobs;
 
+use Carbon\Carbon;
 use Nawasara\Cloudflare\Models\CloudflareZone;
 use Nawasara\Cloudflare\Services\CloudflareClient;
 use Nawasara\Sync\Jobs\AbstractSyncJob;
@@ -68,7 +69,9 @@ class SyncCloudflareZonesJob extends AbstractSyncJob
         foreach ($allZones as $row) {
             $zoneId = $row['id'] ?? null;
             $name = $row['name'] ?? null;
-            if (! $zoneId || ! $name) continue;
+            if (! $zoneId || ! $name) {
+                continue;
+            }
 
             $seenZoneIds[] = $zoneId;
 
@@ -80,8 +83,8 @@ class SyncCloudflareZonesJob extends AbstractSyncJob
                 'plan_name' => $row['plan']['name'] ?? null,
                 'name_servers' => $row['name_servers'] ?? null,
                 'original_name_servers' => $row['original_name_servers'] ?? null,
-                'cf_created_at' => isset($row['created_on']) ? \Carbon\Carbon::parse($row['created_on']) : null,
-                'cf_modified_at' => isset($row['modified_on']) ? \Carbon\Carbon::parse($row['modified_on']) : null,
+                'cf_created_at' => isset($row['created_on']) ? Carbon::parse($row['created_on']) : null,
+                'cf_modified_at' => isset($row['modified_on']) ? Carbon::parse($row['modified_on']) : null,
                 'sync_status' => CloudflareZone::SYNC_SYNCED,
                 'sync_error' => null,
                 'last_synced_at' => now(),
@@ -95,6 +98,7 @@ class SyncCloudflareZonesJob extends AbstractSyncJob
 
                 if ($existing->content_hash === $newHash && $existing->isSynced()) {
                     $stats['unchanged']++;
+
                     continue;
                 }
 

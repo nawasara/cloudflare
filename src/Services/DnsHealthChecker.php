@@ -4,11 +4,14 @@ namespace Nawasara\Cloudflare\Services;
 
 use Illuminate\Support\Carbon;
 use Nawasara\Cloudflare\Models\EndpointHealth;
+use Nawasara\Registry\Models\Asset;
 
 class DnsHealthChecker
 {
     public const HTTP_TIMEOUT = 8;
+
     public const CONNECT_TIMEOUT = 5;
+
     public const USER_AGENT = 'Nawasara-HealthChecker/1.0';
 
     /**
@@ -17,7 +20,7 @@ class DnsHealthChecker
      * peer certificate via CURLOPT_CERTINFO. Persists each result to the
      * nawasara_cloudflare_endpoint_health table.
      *
-     * @param array<string> $identifiers
+     * @param  array<string>  $identifiers
      * @return array<string,array> identifier => result row
      */
     public function checkMany(array $identifiers, bool $withSsl = false, int $concurrency = 15): array
@@ -37,7 +40,7 @@ class DnsHealthChecker
             foreach ($chunk as $id) {
                 $ch = curl_init();
                 curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://' . $id,
+                    CURLOPT_URL => 'https://'.$id,
                     CURLOPT_NOBODY => true, // HEAD-style: no body
                     CURLOPT_FOLLOWLOCATION => true,
                     CURLOPT_MAXREDIRS => 3,
@@ -81,6 +84,7 @@ class DnsHealthChecker
     public function checkOne(string $identifier, bool $withSsl = true): array
     {
         $r = $this->checkMany([$identifier], $withSsl, 1);
+
         return $r[$identifier] ?? [];
     }
 
@@ -134,6 +138,7 @@ class DnsHealthChecker
             if ($errno) {
                 return array_merge($defaults, ['ssl_error' => $this->shortError($errno, curl_error($ch))]);
             }
+
             return $defaults;
         }
 
@@ -162,18 +167,21 @@ class DnsHealthChecker
      */
     protected function parseDn(string $dn, array $fields): ?string
     {
-        if ($dn === '') return null;
+        if ($dn === '') {
+            return null;
+        }
         // Normalize separators.
         $dn = str_replace(["\r", "\n"], ',', $dn);
         $parts = preg_split('/\s*,\s*/', $dn);
 
         foreach ($fields as $key) {
             foreach ($parts as $part) {
-                if (preg_match('/^\s*' . preg_quote($key, '/') . '\s*=\s*(.+?)\s*$/i', $part, $m)) {
+                if (preg_match('/^\s*'.preg_quote($key, '/').'\s*=\s*(.+?)\s*$/i', $part, $m)) {
                     return $m[1];
                 }
             }
         }
+
         return null;
     }
 
@@ -189,25 +197,41 @@ class DnsHealthChecker
      */
     public function computeState(array $row): string
     {
-        if (! empty($row['error'])) return 'critical';
+        if (! empty($row['error'])) {
+            return 'critical';
+        }
 
         $status = $row['status_code'] ?? null;
         $sslDays = $row['ssl_days_remaining'] ?? null;
 
-        if ($status === null) return 'unknown';
-        if ($status >= 500) return 'critical';
-        if ($sslDays !== null && $sslDays < 0) return 'critical';
-        if ($status === 404) return 'warning';
-        if ($sslDays !== null && $sslDays <= 14) return 'warning';
-        if (in_array($status, [401, 403], true)) return 'ok';
-        if ($status >= 400) return 'warning';
+        if ($status === null) {
+            return 'unknown';
+        }
+        if ($status >= 500) {
+            return 'critical';
+        }
+        if ($sslDays !== null && $sslDays < 0) {
+            return 'critical';
+        }
+        if ($status === 404) {
+            return 'warning';
+        }
+        if ($sslDays !== null && $sslDays <= 14) {
+            return 'warning';
+        }
+        if (in_array($status, [401, 403], true)) {
+            return 'ok';
+        }
+        if ($status >= 400) {
+            return 'warning';
+        }
 
         return 'ok';
     }
 
     public static function overallState(array $health): string
     {
-        return (new self())->computeState($health);
+        return (new self)->computeState($health);
     }
 
     protected function persist(array $row, bool $withSsl): void
@@ -245,7 +269,7 @@ class DnsHealthChecker
             28 => 'Timeout',
             35 => 'SSL handshake gagal',
             60 => 'SSL cert invalid',
-            default => 'cURL ' . $errno . ': ' . mb_substr($message ?? '', 0, 100),
+            default => 'cURL '.$errno.': '.mb_substr($message ?? '', 0, 100),
         };
     }
 
@@ -268,7 +292,7 @@ class DnsHealthChecker
     ): array {
         $chunk = max(1, $chunk);
 
-        $query = \Nawasara\Registry\Models\Asset::query()
+        $query = Asset::query()
             ->where('package_ref', 'cloudflare')
             ->where('type', 'subdomain')
             ->whereNotNull('identifier');

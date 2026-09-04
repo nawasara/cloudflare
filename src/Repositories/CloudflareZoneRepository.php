@@ -26,6 +26,7 @@ class CloudflareZoneRepository implements SyncedRepository
         if (is_numeric($id)) {
             return CloudflareZone::find($id);
         }
+
         // by zone_id (UUID) or by name
         return CloudflareZone::where('zone_id', $id)->orWhere('name', $id)->first();
     }
@@ -56,6 +57,7 @@ class CloudflareZoneRepository implements SyncedRepository
     public function syncNow(): ?SyncJob
     {
         SyncCloudflareZonesJob::dispatch(triggerSource: 'manual');
+
         return SyncJob::query()
             ->where('service', 'cloudflare')
             ->where('action', 'sync_zones')

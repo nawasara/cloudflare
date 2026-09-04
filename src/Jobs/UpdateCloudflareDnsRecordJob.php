@@ -2,6 +2,8 @@
 
 namespace Nawasara\Cloudflare\Jobs;
 
+use Carbon\Carbon;
+
 class UpdateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
 {
     protected function action(): string
@@ -55,7 +57,7 @@ class UpdateCloudflareDnsRecordJob extends AbstractCloudflareDnsJob
             'priority' => $result['priority'] ?? $record->priority,
             'comment' => $result['comment'] ?? null,
             'tags' => $result['tags'] ?? [],
-            'cf_modified_at' => isset($result['modified_on']) ? \Carbon\Carbon::parse($result['modified_on']) : now(),
+            'cf_modified_at' => isset($result['modified_on']) ? Carbon::parse($result['modified_on']) : now(),
         ]);
         $record->content_hash = $record->computeContentHash();
         $record->markSynced();
