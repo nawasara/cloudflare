@@ -163,16 +163,34 @@ class DetectAttackJob implements ShouldQueue
             return;
         }
 
-        $alerter::fire($key, 'CloudflareHost', $target, [
+        $konteks = [
             'label' => $w->host,
             'diblokir' => $w->blocked,
             'ditantang' => $w->challenged,
             'bermusuhan' => $bermusuhan,
             'biasanya' => round($normal),
-            'lonjakan' => is_finite($rasio) ? round($rasio, 1).'x' : 'baru',
+            // 'baru' tidak menjelaskan apa pun bagi pembaca. Yang terjadi
+            // adalah host ini BIASANYA TIDAK PERNAH diserang — dan itu justru
+            // keterangan terpenting, karena berarti bukan kenaikan bertahap
+            // melainkan sesuatu yang tiba-tiba dimulai.
+            'lonjakan' => is_finite($rasio)
+                ? round($rasio, 1).'x lipat'
+                : 'melonjak dari nol',
             'negara_terbanyak' => $w->top_country,
             'jendela' => $w->window_minutes.' menit',
-        ]);
+        ];
+
+        // Buang nilai nol: "Diminta verifikasi: 0" tidak memberi tahu apa pun,
+        // dan tiap baris kosong menggeser yang penting keluar layar ponsel.
+        // `biasanya` DIPERTAHANKAN meski nol — justru nol di situ yang paling
+        // berarti, karena berarti host ini tidak pernah diserang sebelumnya.
+        foreach (['diblokir', 'ditantang'] as $k) {
+            if (($konteks[$k] ?? 0) === 0) {
+                unset($konteks[$k]);
+            }
+        }
+
+        $alerter::fire($key, 'CloudflareHost', $target, $konteks);
     }
 
     /**
@@ -227,7 +245,7 @@ class DetectAttackJob implements ShouldQueue
             // tetap terasa.
             'cooldown_minutes' => (int) config('nawasara-cloudflare.attack_detection.cooldown_minutes', 30),
             'description' => 'Lonjakan lalu lintas bermusuhan di Cloudflare',
-            'subject_template' => '{context.label} sedang dihantam - {context.bermusuhan} permintaan ditahan ({context.lonjakan} dari biasanya)',
+            'subject_template' => '{context.label} sedang diserang - {context.bermusuhan} permintaan ditahan dalam {context.jendela}',
         ]));
     }
 }
