@@ -165,10 +165,10 @@ class DetectAttackJob implements ShouldQueue
 
         $konteks = [
             'label' => $w->host,
-            'diblokir' => $w->blocked,
-            'ditantang' => $w->challenged,
-            'bermusuhan' => $bermusuhan,
-            'biasanya' => round($normal),
+            'blocked' => $w->blocked,
+            'managed_challenge' => $w->challenged,
+            'mitigated' => $bermusuhan,
+            'baseline' => round($normal),
             // 'baru' tidak menjelaskan apa pun bagi pembaca. Yang terjadi
             // adalah host ini BIASANYA TIDAK PERNAH diserang — dan itu justru
             // keterangan terpenting, karena berarti bukan kenaikan bertahap
@@ -176,15 +176,15 @@ class DetectAttackJob implements ShouldQueue
             'lonjakan' => is_finite($rasio)
                 ? round($rasio, 1).'x lipat'
                 : 'melonjak dari nol',
-            'negara_terbanyak' => $w->top_country,
-            'jendela' => $w->window_minutes.' menit',
+            'top_country' => $w->top_country,
+            'window' => $w->window_minutes.' menit terakhir',
         ];
 
         // Buang nilai nol: "Diminta verifikasi: 0" tidak memberi tahu apa pun,
         // dan tiap baris kosong menggeser yang penting keluar layar ponsel.
         // `biasanya` DIPERTAHANKAN meski nol — justru nol di situ yang paling
         // berarti, karena berarti host ini tidak pernah diserang sebelumnya.
-        foreach (['diblokir', 'ditantang'] as $k) {
+        foreach (['blocked', 'managed_challenge'] as $k) {
             if (($konteks[$k] ?? 0) === 0) {
                 unset($konteks[$k]);
             }
@@ -245,7 +245,7 @@ class DetectAttackJob implements ShouldQueue
             // tetap terasa.
             'cooldown_minutes' => (int) config('nawasara-cloudflare.attack_detection.cooldown_minutes', 30),
             'description' => 'Lonjakan lalu lintas bermusuhan di Cloudflare',
-            'subject_template' => '{context.label} sedang diserang - {context.bermusuhan} permintaan ditahan dalam {context.jendela}',
+            'subject_template' => '{context.label} sedang diserang - {context.mitigated} permintaan dimitigasi',
         ]));
     }
 }
