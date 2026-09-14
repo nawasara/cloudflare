@@ -1,19 +1,19 @@
 # Nawasara Cloudflare
 
-Cloudflare management dashboard for the Nawasara superapp framework — DNS records, zones, firewall rules, page rules, SSL settings, cache, and analytics, all read from a local DB snapshot for speed and mutated through queue jobs for auditability.
+Cloudflare management dashboard for the Nawasara superapp framework. It covers DNS records, zones, firewall rules, page rules, SSL settings, cache, and analytics, all read from a local DB snapshot for speed and mutated through queue jobs for auditability.
 
 ## Features
 
-- **Zone management** — list domains with SSL mode, security level, plan, name servers, and per-zone settings
-- **DNS records** — full CRUD across A, AAAA, CNAME, MX, TXT, NS, and SRV types, with comment + tags preserved on update
-- **Firewall rules** — CRUD WAF custom rules per zone
-- **Page rules** — CRUD URL-pattern rules
-- **Analytics** — request volume, bandwidth, threats blocked, and unique visitors with per-OPD rollup
-- **Cache purge** — purge entire cache or specific URLs
-- **Under Attack mode** — toggle the security level when a zone is under DDoS pressure
+- **Zone management**: list domains with SSL mode, security level, plan, name servers, and per-zone settings
+- **DNS records**: full CRUD across A, AAAA, CNAME, MX, TXT, NS, and SRV types, with comment and tags preserved on update
+- **Firewall rules**: CRUD WAF custom rules per zone
+- **Page rules**: CRUD URL-pattern rules
+- **Analytics**: request volume, bandwidth, threats blocked, and unique visitors with per-OPD rollup
+- **Cache purge**: purge the entire cache or specific URLs
+- **Under Attack mode**: toggle the security level when a zone is under DDoS pressure
 - **Sync info bar** on every page showing the last successful sync time, pending mutation count, and a link to the audit log
 
-The package follows the DB-cache + queue pattern from `nawasara/sync`: reads come from local snapshot tables (paginated, fast); writes dispatch queue jobs that update Cloudflare and the snapshot via content-hash conflict detection.
+The package follows the DB-cache plus queue pattern from `nawasara/sync`: reads come from local snapshot tables (paginated, fast); writes dispatch queue jobs that update Cloudflare and the snapshot via content-hash conflict detection.
 
 ## Installation
 
@@ -23,7 +23,7 @@ php artisan migrate
 php artisan db:seed --class="Nawasara\Cloudflare\Database\Seeders\PermissionSeeder" --force
 ```
 
-The package is auto-discovered by Laravel — no manual provider registration required.
+The package is auto-discovered by Laravel, so no manual provider registration is required.
 
 ## Cloudflare API Token Setup
 
@@ -37,7 +37,7 @@ Click your **profile icon** (top right) → **My Profile** → **API Tokens** ta
 
 ### 3. Create a custom token
 
-Click **Create Token** → choose **Create Custom Token** at the bottom of the templates list.
+Click **Create Token**, then choose **Create Custom Token** at the bottom of the templates list.
 
 ### 4. Configure permissions
 
@@ -58,12 +58,12 @@ Name the token (e.g. `Nawasara Dashboard`) and add the following permissions dep
 
 Choose the scope:
 
-- **All zones** — the token can access every domain in the account
-- **Specific zone** — restrict to one or a few domains (recommended if you only manage a subset)
+- **All zones**: the token can access every domain in the account
+- **Specific zone**: restrict to one or a few domains (recommended if you only manage a subset)
 
 ### 6. (Optional) IP Address Filtering
 
-If your Nawasara server has a static IP, add **Client IP Address Filtering** → **Is in** → enter the IP. This protects against the token being used from anywhere else if it leaks.
+If your Nawasara server has a static IP, add **Client IP Address Filtering** → **Is in** and enter the IP. This protects against the token being used from anywhere else if it leaks.
 
 ### 7. (Optional) Token lifetime
 
@@ -73,7 +73,7 @@ Set **Start Date** and **End Date** for a temporary token. Leave blank for a per
 
 Click **Continue to summary**, review, then **Create Token**.
 
-**Copy the displayed token immediately** — Cloudflare only shows it once.
+**Copy the displayed token immediately**, because Cloudflare only shows it once.
 
 ### 9. Note the Account ID
 
@@ -89,8 +89,8 @@ Or read it from any dashboard URL: `dash.cloudflare.com/{ACCOUNT_ID}/...`
 1. Open Nawasara → `/nawasara-vault`
 2. Choose the **Cloudflare** group
 3. Fill in:
-   - **API Token** — paste the token from step 8
-   - **Account ID** — from step 9
+   - **API Token**: paste the token from step 8
+   - **Account ID**: from step 9
 4. Save
 
 The package picks up credentials from Vault automatically.
